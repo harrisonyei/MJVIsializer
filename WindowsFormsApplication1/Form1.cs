@@ -19,34 +19,30 @@ namespace WindowsFormsApplication1
         {
             public List<float> huRounds;
             public List<float> huTais;
-            public List<float> huProbs;
             public List<int[]> hands;
 
             public Player()
             {
                 huRounds = new List<float>();
-                huTais = new List<float>();
-                huProbs = new List<float>();
-                hands = new List<int[]>();
+                huTais   = new List<float>();
+                hands    = new List<int[]>();
             }
 
             public void Init()
             {
                 huRounds.Clear();
                 huTais.Clear();
-                huProbs.Clear();
             }
 
-            public void Append(int r, int t, float p)
+            public void Append(int r, int t)
             {
                 huRounds.Add(r);
                 huTais.Add(t);
-                huProbs.Add(p);
             }
 
-            public void AppendHand(int h0,int h1,int h2)
+            public void AppendHand(int h0,int h1,int h2,int h3)
             {
-                int[] hand = new int[3] { h0, h1, h2 };
+                int[] hand = new int[4] { h0, h1, h2 ,h3};
                 hands.Add(hand);
             }
 
@@ -62,7 +58,7 @@ namespace WindowsFormsApplication1
                         result = huTais[idx];
                         break;
                     case 2:
-                        result = huProbs[idx];
+                        result = huTais[idx];
                         break;
                     case 3:
                         result = (huRounds[idx]) < 25 ? 1 : 0;
@@ -83,34 +79,57 @@ namespace WindowsFormsApplication1
                 min = _min;
             }
         }
-        [DllImport("./exportcsharpDll.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Simulation(ref int progress,string str,int rounds, int dtype, char d0, char d1, char d2, char d3, char t0, char t1, char t2, char t3, float p0, float p1, float p2, float p3);
+        [DllImport("./M16SimDll.dll", CallingConvention = CallingConvention.Cdecl)]
+        private static extern int Simulation(ref int p,string str,int rounds, int dtype,int patternSize, char[] dis, char[] tweight, char[] pweight,int[] patternSizes,int[] patterns);
         int rounds    = 100;
         int batchSize = 1;
         char[] d  = new char[4];
-        char[] t  = new char[4];
-        float[] p = new float[4];
+        char[][] t = new char[4][];
+        char[][] p = new char[4][];
         int playerIdx = 0;
         int curplayerIdx = 0;
         int dataType  = 0;
         int dataMode  = 0;
         int dealMode  = 0;
-        List<float> displayData;
+        List <float> displayData;
+        List<int>[] patterns;
         Dictionary<string, LogData> cacheLogs;
         Player[] players;
+        const int WEIGHT_COUNT = 8;
+        double WEIGHT_RADIUS = 0;
+        string[] WEIGHT_TEXTS = new string[8] { "a","b","c","d","e","f", "g","h"};
         public Form1()
         {
+            for(int i = 0; i < 4; i++)
+            {
+                t[i] = new char[WEIGHT_COUNT];
+                p[i] = new char[WEIGHT_COUNT];
+            }
+            patterns = new List<int>[WEIGHT_COUNT];
+            for(int i = 0; i < WEIGHT_COUNT; i++)
+            {
+                patterns[i] = new List<int>() {0};
+            }
             InitializeComponent();
             chart1.Series.Clear();
             chart1.Titles.Clear();
             displayData = new List<float>();
             players     = new Player[4];
-            for(int i = 0; i < 4; i++)
+            weights     = new float[WEIGHT_COUNT];
+            for(int i = 0;i<weights.Length;i++)
+            {
+                weights[i] = 50;
+            }
+            weightPoints = new PointF[WEIGHT_COUNT];
+            background  = CreateCirclePoints(WEIGHT_COUNT, 100, pictureBox1.Width * .5f, pictureBox1.Height * .5f);
+            background2 = CreateCirclePoints(WEIGHT_COUNT, 50, pictureBox1.Width * .5f, pictureBox1.Height * .5f);
+            WEIGHT_RADIUS = 100;
+            for (int i = 0; i < 4; i++)
             {
                 players[i] = new Player();
             }
             cacheLogs = new Dictionary<string, LogData>();
-            tooltip     = new ToolTip();
+            tooltip   = new ToolTip();
             tooltip.SetToolTip(chart1,"");
             tooltip.OwnerDraw = true;
             tooltip.Popup += new PopupEventHandler(toolTip1_Popup);
@@ -127,15 +146,31 @@ namespace WindowsFormsApplication1
                 // Set Position to the beginning of the stream.
                 binReader.BaseStream.Position = 0;
                 // rounds int
-                rounds   = binReader.ReadInt32();
+                rounds   = binReader.ReadInt32() * 16;
                 dealMode = binReader.ReadInt32();
+                for(int i = 0;i < WEIGHT_COUNT; i++)
+                {
+                    int n = binReader.ReadInt32();
+                    patterns[i].Clear();
+                    for (int j = 0; j < n; j++)
+                    {
+                        int pat = binReader.ReadInt32();
+                        patterns[i].Add(pat);
+                    }
+                }
                 //player 1 ~ 4 ( dists, tais, probs)char char float
                 for (int i = 0; i < 4; i++)
                 {
                     players[i].Init();
                     d[i] = (char)binReader.ReadByte();
-                    t[i] = (char)binReader.ReadByte();
-                    p[i] = binReader.ReadSingle();
+                    for(int j = 0; j < WEIGHT_COUNT; j++)
+                    {
+                        t[i][j] = (char)binReader.ReadByte();
+                    }
+                    for (int j = 0; j < WEIGHT_COUNT; j++)
+                    {
+                        p[i][j] = (char)binReader.ReadByte();
+                    }
                 }
                 //per round
                 //     player 1 ~ 4 ( huround, hutai, huprob)char char float
@@ -146,14 +181,14 @@ namespace WindowsFormsApplication1
                         int hand0 = binReader.ReadInt32();
                         int hand1 = binReader.ReadInt32();
                         int hand2 = binReader.ReadInt32();
-                        players[j].AppendHand(hand0, hand1, hand2);
+                        int hand3 = binReader.ReadInt32();
+                        players[j].AppendHand(hand0, hand1, hand2, hand3);
                     }
                     for (int j = 0; j < 4; j++)
                     {
                         char huround = (char)binReader.ReadByte();
                         char hutai   = (char)binReader.ReadByte();
-                        float huprob = binReader.ReadSingle();
-                        players[j].Append(huround, hutai, huprob);
+                        players[j].Append(huround, hutai);
                     }
                 }
                 updateFormView();
@@ -176,10 +211,6 @@ namespace WindowsFormsApplication1
             {
                 float max;
                 float min;
-                updateDisplayData(out max,out min);
-                chart1.ChartAreas[0].AxisY.Maximum = Math.Round(1.1*max,3);
-                chart1.ChartAreas[0].AxisY.Minimum = Math.Round(0.9*min,3);
-                chart1.ChartAreas[0].AxisX.Minimum = 0;
                 //標題 最大數值
                 Series series1 = new Series("數列");
                 series1.YValueType = ChartValueType.Single;
@@ -188,15 +219,47 @@ namespace WindowsFormsApplication1
                 series1.Color = Color.Blue;
                 //設定字型
                 series1.Font = new Font("新細明體", 14);
+                updateDisplayData(out max,out min);
+                chart1.ChartAreas[0].AxisY.Minimum = Math.Round(0.9 * min, 3);
+                chart1.ChartAreas[0].AxisX.Minimum = 0;
                 //折線圖
-                series1.ChartType = SeriesChartType.FastLine;
-                //將數值顯示在線上
-                series1.IsValueShownAsLabel = false;
-                //將數值新增至序列
-                for (int index = 0; index < displayData.Count; index++)
+                if (dataType == 2)
                 {
-                    series1.Points.AddXY(index, displayData[index]);
+                    series1.ChartType = SeriesChartType.Column;
+                    series1.IsValueShownAsLabel = true;
+                    int[] ts = new int[(int)max+2];
+                    int newmax = 0;
+                    for (int index = 0; index < displayData.Count; index++)
+                    {
+                        int i = (int)displayData[index];
+                        ts[i] += 1;
+                        if (ts[i] > newmax)
+                        {
+                            newmax = ts[i];
+                        }
+                    }
+                    newmax += 1;
+                    chart1.ChartAreas[0].AxisY.Maximum = newmax;
+                    for (int i = 0; i < ts.Length; i++)
+                    {
+                        series1.Points.AddXY(i, ts[i]);
+                    }
+                    max = newmax;
+                    min = 0;
                 }
+                else
+                {
+                    series1.ChartType = SeriesChartType.FastLine;
+                    //將數值顯示在線上
+                    series1.IsValueShownAsLabel = false;
+                    //將數值新增至序列
+                    chart1.ChartAreas[0].AxisY.Maximum = Math.Round(max, 3);
+                    for (int index = 0; index < displayData.Count; index++)
+                    {
+                        series1.Points.AddXY(index, displayData[index]);
+                    }
+                }
+                
                 //將序列新增到圖上
                 chart1.Series.Add(series1);
                 cacheLogs[str] = new LogData(series1,max,min);
@@ -240,7 +303,7 @@ namespace WindowsFormsApplication1
 
         void updateDisplayData(out float max,out float min)
         {
-            max = 0;
+            max = 0.5f;
             min = 100;
             displayData.Clear();
             List<float> dataBatch = new List<float>();
@@ -280,11 +343,32 @@ namespace WindowsFormsApplication1
                 }
             }
         }
-        int progress = new int();
+        int progress = 0;
         string resultFileName = "";
         int runSim()
         {
-            int err = Simulation(ref progress, resultFileName, rounds, dealMode, d[0], d[1], d[2], d[3], t[0], t[1], t[2], t[3], p[0], p[1], p[2], p[3]);
+            int[] patSizes;
+            List<int> pats = new List<int>();
+            List<char> tweights = new List<char>();
+            List<char> pweights = new List<char>();
+            patSizes = new int[patterns.Length];
+            for(int i = 0; i < 4; i++)
+            {
+                for(int j = 0; j < WEIGHT_COUNT; j++)
+                {
+                    tweights.Add(t[i][j]);
+                    pweights.Add(p[i][j]);
+                }
+            }
+            for(int i = 0; i < patterns.Length; i++)
+            {
+                patSizes[i] =  patterns[i].Count;
+                for(int j = 0;j< patSizes[i]; j++)
+                {
+                    pats.Add(patterns[i][j]);
+                }
+            }
+            int err = Simulation(ref progress, resultFileName, rounds, dealMode,WEIGHT_COUNT, d, tweights.ToArray(), pweights.ToArray(), patSizes, pats.ToArray());
             if (err == -1)
             {
                 resultFileName = "Error !";
@@ -354,7 +438,7 @@ namespace WindowsFormsApplication1
             if (curplayerIdx > 0)
             {
                 Form2 form2 = new Form2();
-                form2.UpdateData(players[curplayerIdx - 1].hands, lastIndex, curplayerIdx - 1, d[curplayerIdx - 1],t[curplayerIdx - 1],p[curplayerIdx - 1]);
+                form2.UpdateData(players[curplayerIdx - 1].hands, lastIndex, curplayerIdx - 1, d[curplayerIdx - 1]);
                 form2.Show();
             }
         }
@@ -441,14 +525,33 @@ namespace WindowsFormsApplication1
                         fw.WriteLine(playerIdx);
                         fw.WriteLine(dataType);
                         fw.WriteLine(dataMode);
-                        for (int i = 0; i < 4; i++)
+                        fw.WriteLine(WEIGHT_COUNT);
+                        for (int i = 0;i< WEIGHT_COUNT; i++)
                         {
                             string line = "";
-                            line += ((int)d[i]).ToString();
-                            line += ",";
-                            line += ((int)t[i]).ToString();
-                            line += ",";
-                            line += p[i].ToString();
+                            for(int j = 0; j < patterns[i].Count; j++)
+                            {
+                                line += patterns[i][j].ToString();
+                                line += ",";
+                            }
+                            fw.WriteLine(line);
+                        }
+                        for (int i = 0; i < 4; i++)
+                        {
+                            fw.WriteLine((int)d[i]);
+                            string line = "";
+                            for (int j = 0; j < WEIGHT_COUNT; j++)
+                            {
+                                line += ((int)t[i][j]).ToString();
+                                line += ",";
+                            }
+                            fw.WriteLine(line);
+                            line = "";
+                            for (int j = 0; j < WEIGHT_COUNT; j++)
+                            {
+                                line += ((int)p[i][j]).ToString();
+                                line += ",";
+                            }
                             fw.WriteLine(line);
                         }
                         fw.Flush(); // Added
@@ -478,13 +581,35 @@ namespace WindowsFormsApplication1
                         playerIdx = int.Parse(fr.ReadLine());
                         dataType = int.Parse(fr.ReadLine());
                         dataMode = int.Parse(fr.ReadLine());
-                        for (int i = 0; i < 4; i++)
+                        int weightDim = int.Parse(fr.ReadLine());
+                        for (int i = 0; i < WEIGHT_COUNT; i++)
                         {
                             string line = fr.ReadLine();
                             string[] playerConfig = line.Split(',');
-                            d[i] = (char)int.Parse(playerConfig[0]);
-                            t[i] = (char)int.Parse(playerConfig[1]);
-                            p[i] = float.Parse(playerConfig[2]);
+                            patterns[i].Clear();
+                            for (int j = 0; j < playerConfig.Length; j++)
+                            {
+                                if(playerConfig[j] != "")
+                                {
+                                    patterns[i].Add(int.Parse(playerConfig[j]));
+                                }
+                            }
+                        }
+                        for (int i = 0; i < 4; i++)
+                        {
+                            d[i] = (char)int.Parse(fr.ReadLine());
+                            string line = fr.ReadLine();
+                            string[] playerConfig = line.Split(',');
+                            for (int j = 0; j < WEIGHT_COUNT; j++)
+                            { 
+                                t[i][j] = (char)int.Parse(playerConfig[j]);
+                            }
+                            line = fr.ReadLine();
+                            playerConfig = line.Split(',');
+                            for (int j = 0; j < WEIGHT_COUNT; j++)
+                            {
+                                p[i][j] = (char)int.Parse(playerConfig[j]);
+                            }
                         }
                     }
                 }
@@ -502,16 +627,6 @@ namespace WindowsFormsApplication1
             textBox6.Text = ((int)d[1]).ToString();
             textBox9.Text = ((int)d[2]).ToString();
             textBox12.Text = ((int)d[3]).ToString();
-
-            textBox2.Text = ((int)t[0]).ToString();
-            textBox5.Text = ((int)t[1]).ToString();
-            textBox8.Text = ((int)t[2]).ToString();
-            textBox11.Text = ((int)t[3]).ToString();
-
-            textBox3.Text = (p[0]).ToString();
-            textBox4.Text = (p[1]).ToString();
-            textBox7.Text = (p[2]).ToString();
-            textBox10.Text =(p[3]).ToString();
 
             textBox13.Text = rounds.ToString();
             textBox14.Text = batchSize.ToString();
@@ -536,6 +651,8 @@ namespace WindowsFormsApplication1
         {
             // chart player change
             playerIdx = comboBox2.SelectedIndex;
+            curEditWeight = playerIdx-1;
+            UpdateWeights();
         }
         private void textBox1_TextChanged(object sender, EventArgs e)
         {
@@ -584,102 +701,6 @@ namespace WindowsFormsApplication1
                 if (dist > 0)
                 {
                     d[3] = (char)dist;
-                }
-            }
-        }
-        private void textBox2_TextChanged(object sender, EventArgs e)
-        {
-            // player 0 tai
-            int tai = 0;
-            if (int.TryParse(textBox2.Text, out tai))
-            {
-                if (tai > 0)
-                {
-                    t[0] = (char)tai;
-                }
-            }
-        }
-        private void textBox5_TextChanged(object sender, EventArgs e)
-        {
-            // player 1 tai
-            int tai = 0;
-            if (int.TryParse(textBox5.Text, out tai))
-            {
-                if (tai > 0)
-                {
-                    t[1] = (char)tai;
-                }
-            }
-        }
-        private void textBox8_TextChanged(object sender, EventArgs e)
-        {
-            // player 2 tai
-            int tai = 0;
-            if (int.TryParse(textBox8.Text, out tai))
-            {
-                if (tai > 0)
-                {
-                    t[2] = (char)tai;
-                }
-            }
-        }
-        private void textBox11_TextChanged(object sender, EventArgs e)
-        {
-            // player 3 tai
-            int tai = 0;
-            if (int.TryParse(textBox11.Text, out tai))
-            {
-                if (tai > 0)
-                {
-                    t[3] = (char)tai;
-                }
-            }
-        }
-        private void textBox3_TextChanged(object sender, EventArgs e)
-        {
-            // player 0 prob
-            float prob = 0;
-            if (float.TryParse(textBox3.Text, out prob))
-            {
-                if (prob > 0)
-                {
-                    p[0] = prob;
-                }
-            }
-        }
-        private void textBox4_TextChanged(object sender, EventArgs e)
-        {
-            // player 1 prob
-            float prob = 0;
-            if (float.TryParse(textBox4.Text, out prob))
-            {
-                if (prob > 0)
-                {
-                    p[1] = prob;
-                }
-            }
-        }
-        private void textBox7_TextChanged(object sender, EventArgs e)
-        {
-            // player 2 prob
-            float prob = 0;
-            if (float.TryParse(textBox7.Text, out prob))
-            {
-                if (prob > 0)
-                {
-                    p[2] = prob;
-                }
-            }
-        }
-        private void textBox10_TextChanged(object sender, EventArgs e)
-        {
-            // player 3 prob
-            float prob = 0;
-            if (float.TryParse(textBox10.Text, out prob))
-            {
-                if (prob > 0)
-                {
-                    p[3] = prob;
                 }
             }
         }
@@ -738,7 +759,250 @@ namespace WindowsFormsApplication1
 
         private void Form1_Close(object sender, EventArgs e)
         {
-            GC.KeepAlive(progress);
+
+        }
+
+        PointF[] CreateCirclePoints(int n,float r, float offset_x, float offset_y)
+        {
+            PointF[] res = new PointF[n];
+            double delta = 2 * Math.PI / n;
+            double theta = Math.PI * .5;
+            for (int i = 0; i < n; i++)
+            {
+                float x = ((float)Math.Cos(theta) * r);
+                float y = -((float)Math.Sin(theta) * r);
+                res[i] = new PointF(x+offset_x, y+offset_y);
+                theta += delta;
+            }
+            return res;
+        }
+        float[] weights;
+        PointF[] background;
+        PointF[] background2;
+        PointF[] weightPoints;
+        int curWeightIndex = -1;
+        private void groupBox2_Paint(object sender, PaintEventArgs e)
+        {
+            if (curEditWeight < 0)
+                return;
+            Graphics g = pictureBox1.CreateGraphics();
+            g.Clear(Color.White);
+            float w = pictureBox1.Width;
+            float h = pictureBox1.Height;
+            float r = 100;
+            float ow = pictureBox1.Width * .5f;
+            float oh = pictureBox1.Height * .5f;
+            g.DrawPolygon(Pens.Black, background);
+            g.DrawPolygon(Pens.Black, background2);
+            foreach (var b in background)
+            {
+                g.DrawLine(Pens.Black, 1.1f*(b.X-ow)+ow, 1.1f*(b.Y-oh)+oh, ow, oh);
+            }
+            for (int i = 0; i < weights.Length; i++)
+                weightPoints[i] = new PointF(weights[i] * (background[i].X - ow) / r + ow, weights[i] * (background[i].Y- oh) / r + oh);
+            SolidBrush semiTransBrush = new SolidBrush(Color.FromArgb(128, 250, 0, 0));
+            g.FillPolygon(semiTransBrush, weightPoints);
+            g.DrawPolygon(Pens.Red, weightPoints);
+            Font f = new Font("Arial",12, FontStyle.Bold);
+            for (int i = 0; i < weights.Length; i++)
+            {
+                g.FillEllipse(Brushes.White, weightPoints[i].X-3, weightPoints[i].Y-3, 6, 6);
+                g.DrawEllipse(Pens.Red, weightPoints[i].X-3, weightPoints[i].Y-3, 6, 6);
+                if(curEditWeightMode == 0)
+                {
+                    g.DrawString(WEIGHT_TEXTS[i]+":"+Math.Round(t[curEditWeight][i]/100.0,2),f,Brushes.Black, 1.2f * (background[i].X - ow) + ow-22, 1.2f * (background[i].Y - oh) + oh-7);
+                }
+                else
+                {
+                    g.DrawString(WEIGHT_TEXTS[i] + ":" + Math.Round(p[curEditWeight][i] / 100.0, 2), f, Brushes.Black, 1.2f * (background[i].X - ow) + ow - 22, 1.2f * (background[i].Y - oh) + oh - 7);
+                }
+            }
+            g.DrawString("P" + curEditWeight + (curEditWeightMode==0?" probability":" volatility"), f, Brushes.Black,2,4);
+        }
+
+        private void pictureBox1_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (curEditWeight < 0)
+                return;
+            if (curWeightIndex >= 0)
+            {
+                float ow = pictureBox1.Width * .5f;
+                float oh = pictureBox1.Height * .5f;
+                PointF a = new PointF(background[curWeightIndex].X - ow, background[curWeightIndex].Y - oh);
+                PointF b = new PointF(e.X - ow, e.Y - oh);
+                float r = 100;
+                double delta = WEIGHT_RADIUS / 20;
+                double bLen = Math.Sqrt(b.X * b.X + b.Y * b.Y);
+                if (bLen == 0)
+                {
+                    weights[curWeightIndex] = 0;
+                }
+                else
+                {
+                    double dot = (a.X * b.X + a.Y * b.Y) / WEIGHT_RADIUS;
+                    weights[curWeightIndex] = (float)(Math.Floor(dot / delta) * delta);
+                }
+                if(weights[curWeightIndex] > WEIGHT_RADIUS * 1.1f)
+                {
+                    weights[curWeightIndex] = (float)(WEIGHT_RADIUS) *1.1f;
+                }
+                else if(weights[curWeightIndex] < 0)
+                {
+                    weights[curWeightIndex] = 0;
+                }
+                groupBox2.Invalidate();
+                UpdateFromWeights();
+            }
+        }
+
+        private void pictureBox1_MouseLeave(object sender, EventArgs e)
+        {
+            curWeightIndex = -1;
+        }
+
+        private void pictureBox1_MouseUp(object sender, MouseEventArgs e)
+        {
+            curWeightIndex = -1;
+        }
+        float dot(PointF a, PointF b)
+        {
+            return a.X * b.X + a.Y * b.Y;
+        }
+        float DistanceLine(PointF p, PointF a, PointF b)
+        {
+            PointF ap = new PointF(p.X - a.X, p.Y - a.Y);
+            PointF ab = new PointF(b.X - a.X, b.Y - a.Y);
+            float t = dot(ap,ab) / dot(ab,ap);
+            if (t < 0)
+                t = 0;
+            else if (t > 1)
+                t = 1;
+            PointF c = new PointF(a.X + t * ab.X-p.X, a.Y + t * ab.Y-p.Y);
+            return (float)Math.Sqrt(c.X*c.X+c.Y*c.Y);
+        }
+        private void pictureBox1_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (curEditWeight < 0)
+                return;
+            float min = float.PositiveInfinity;
+            int idx = -1;
+            float ow = pictureBox1.Width * .5f;
+            float oh = pictureBox1.Height * .5f;
+            float r = 100;
+            PointF center = new PointF(ow,oh);
+            for (int i = 0; i < weights.Length; i++)
+            {
+                float d = DistanceLine(e.Location, center, background[i]);
+                if (d < min)
+                {
+                    min = d;
+                    idx = i;
+                }
+            }
+            curWeightIndex = idx;
+        }
+        int curEditWeight = -1;
+        int curEditWeightMode = 0;
+        void UpdateFromWeights()
+        {
+            if (curEditWeight < 0)
+                return;
+            if (curEditWeightMode == 0)
+            {
+                for (int i = 0; i < WEIGHT_COUNT; i++)
+                {
+                    t[curEditWeight][i] = (char)(weights[i] * 100 / WEIGHT_RADIUS);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < WEIGHT_COUNT; i++)
+                {
+                    p[curEditWeight][i] = (char)(weights[i] * 100 / WEIGHT_RADIUS);
+                }
+            }
+        }
+        void UpdateWeights()
+        {
+            if (curEditWeight < 0)
+                return;
+            if(curEditWeightMode == 0)
+            {
+                for (int i = 0; i < WEIGHT_COUNT; i++)
+                {
+                    weights[i] = (float)(t[curEditWeight][i] * WEIGHT_RADIUS / 100.0);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < WEIGHT_COUNT; i++)
+                {
+                    weights[i] = (float)(p[curEditWeight][i] * WEIGHT_RADIUS / 100.0);
+                }
+            }
+            groupBox2.Invalidate();
+        }
+        private void button3_Click(object sender, EventArgs e)
+        {
+            curEditWeight = 0;
+            curEditWeightMode = 0;
+            UpdateWeights();
+        }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            curEditWeight = 1;
+            curEditWeightMode = 0;
+            UpdateWeights();
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+            curEditWeight = 2;
+            curEditWeightMode = 0;
+            UpdateWeights();
+        }
+
+        private void button6_Click(object sender, EventArgs e)
+        {
+            curEditWeight = 3;
+            curEditWeightMode = 0;
+            UpdateWeights();
+        }
+
+        private void button10_Click(object sender, EventArgs e)
+        {
+            curEditWeight = 0;
+            curEditWeightMode = 1;
+            UpdateWeights();
+        }
+
+        private void button9_Click(object sender, EventArgs e)
+        {
+            curEditWeight = 1;
+            curEditWeightMode = 1;
+            UpdateWeights();
+        }
+
+        private void button8_Click(object sender, EventArgs e)
+        {
+            curEditWeight = 2;
+            curEditWeightMode = 1;
+            UpdateWeights();
+        }
+
+        private void button7_Click(object sender, EventArgs e)
+        {
+            curEditWeight = 3;
+            curEditWeightMode = 1;
+            UpdateWeights();
+        }
+
+        private void button11_Click(object sender, EventArgs e)
+        {
+            EditPatternForm form = new EditPatternForm();
+            form.Show();
+            form.UpdateFormData(WEIGHT_TEXTS, patterns);
         }
     }
 }

@@ -12,14 +12,14 @@ namespace WindowsFormsApplication1
 {
     public partial class Form2 : Form
     {
-        const int NUM_SPRITES   = 42;
+        const int NUM_SPRITES   = 45;
         private Image[] sprites = new Image[NUM_SPRITES];
         private PictureBox[] picBoxes;
         public Form2()
         {
             InitializeComponent();
             picBoxes = Controls.OfType<PictureBox>().OrderBy(box => box.Name).ToArray();
-            LoadSprites("./Src/mjSpriteSheet612x446.jpg");
+            LoadSprites();
             label1.Text = "";
             label2.Text = "";
         }
@@ -28,13 +28,13 @@ namespace WindowsFormsApplication1
         int idx           = 0;
         int player        = 0;
 
-        public void UpdateData(List<int[]> _datas,int _idx,int _player,int d,int t,float p)
+        public void UpdateData(List<int[]> _datas,int _idx,int _player,int d)
         {
             datas  = _datas;
             idx    = _idx;
             player = _player;
 
-            label1.Text = "Player " + player + "  dist: "+d+"  tai: "+t+"  p: "+p;
+            label1.Text = "Player " + player + "  dist: "+d;
             label2.Text = "Round "  + idx;
             updateImages(idx);
         }
@@ -47,9 +47,11 @@ namespace WindowsFormsApplication1
         void updateImages(int _idx)
         {
             int count = 0;
-            for(int i = 0; i < 3; i++)
+            int[] arr = new int[4] {0,1,2,4};
+            for(int idx = 0; idx < 4; idx++)
             {
-                int cards = datas[_idx][i];
+                int i      = arr[idx];
+                int cards  = datas[_idx][idx];
                 for (int j = 0; j < 9; j++)
                 {
                     int c_count = ((cards >> (j * 3)) & 7);
@@ -77,11 +79,11 @@ namespace WindowsFormsApplication1
             label2.Text = "Round " + idx;
             updateImages(idx);
         }
-        private bool LoadSprites(string fileName)
+        private bool LoadSprites()
         {
             try
             {
-                Image image = Bitmap.FromFile(fileName);
+                Image image = Properties.Resources.mjSpriteSheet612x446;
                 idx = 0;
                 for (int i = 0; i < sprites.Length; i++)
                 {

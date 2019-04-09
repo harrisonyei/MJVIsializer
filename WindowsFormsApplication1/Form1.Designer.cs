@@ -37,6 +37,14 @@
             this.comboBox1 = new System.Windows.Forms.ComboBox();
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.button7 = new System.Windows.Forms.Button();
+            this.button8 = new System.Windows.Forms.Button();
+            this.button9 = new System.Windows.Forms.Button();
+            this.button10 = new System.Windows.Forms.Button();
+            this.button6 = new System.Windows.Forms.Button();
+            this.button5 = new System.Windows.Forms.Button();
+            this.button4 = new System.Windows.Forms.Button();
+            this.button3 = new System.Windows.Forms.Button();
             this.label7 = new System.Windows.Forms.Label();
             this.label6 = new System.Windows.Forms.Label();
             this.label5 = new System.Windows.Forms.Label();
@@ -44,18 +52,11 @@
             this.label3 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
-            this.textBox10 = new System.Windows.Forms.TextBox();
-            this.textBox11 = new System.Windows.Forms.TextBox();
             this.textBox12 = new System.Windows.Forms.TextBox();
-            this.textBox7 = new System.Windows.Forms.TextBox();
-            this.textBox8 = new System.Windows.Forms.TextBox();
             this.textBox9 = new System.Windows.Forms.TextBox();
-            this.textBox4 = new System.Windows.Forms.TextBox();
-            this.textBox5 = new System.Windows.Forms.TextBox();
             this.textBox6 = new System.Windows.Forms.TextBox();
-            this.textBox3 = new System.Windows.Forms.TextBox();
-            this.textBox2 = new System.Windows.Forms.TextBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.button2 = new System.Windows.Forms.Button();
             this.label10 = new System.Windows.Forms.Label();
             this.comboBox3 = new System.Windows.Forms.ComboBox();
@@ -72,9 +73,11 @@
             this.label9 = new System.Windows.Forms.Label();
             this.comboBox4 = new System.Windows.Forms.ComboBox();
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
+            this.button11 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.chart1)).BeginInit();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -105,11 +108,11 @@
             series1.Legend = "Legend1";
             series1.Name = "Series1";
             this.chart1.Series.Add(series1);
-            this.chart1.Size = new System.Drawing.Size(1167, 272);
+            this.chart1.Size = new System.Drawing.Size(893, 272);
             this.chart1.TabIndex = 1;
             this.chart1.Text = "chart1";
-            this.chart1.MouseMove += new System.Windows.Forms.MouseEventHandler(this.chart1_MouseMove);
             this.chart1.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.chart1_Click);
+            this.chart1.MouseMove += new System.Windows.Forms.MouseEventHandler(this.chart1_MouseMove);
             // 
             // comboBox1
             // 
@@ -117,7 +120,7 @@
             this.comboBox1.Items.AddRange(new object[] {
             "Hu Round",
             "Hu Tai",
-            "Hu Prob",
+            "Hu Tai Distribution",
             "Hu Rate"});
             this.comboBox1.Location = new System.Drawing.Point(162, 299);
             this.comboBox1.Name = "comboBox1";
@@ -135,6 +138,14 @@
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.button7);
+            this.groupBox1.Controls.Add(this.button8);
+            this.groupBox1.Controls.Add(this.button9);
+            this.groupBox1.Controls.Add(this.button10);
+            this.groupBox1.Controls.Add(this.button6);
+            this.groupBox1.Controls.Add(this.button5);
+            this.groupBox1.Controls.Add(this.button4);
+            this.groupBox1.Controls.Add(this.button3);
             this.groupBox1.Controls.Add(this.label7);
             this.groupBox1.Controls.Add(this.label6);
             this.groupBox1.Controls.Add(this.label5);
@@ -142,17 +153,9 @@
             this.groupBox1.Controls.Add(this.label3);
             this.groupBox1.Controls.Add(this.label2);
             this.groupBox1.Controls.Add(this.label1);
-            this.groupBox1.Controls.Add(this.textBox10);
-            this.groupBox1.Controls.Add(this.textBox11);
             this.groupBox1.Controls.Add(this.textBox12);
-            this.groupBox1.Controls.Add(this.textBox7);
-            this.groupBox1.Controls.Add(this.textBox8);
             this.groupBox1.Controls.Add(this.textBox9);
-            this.groupBox1.Controls.Add(this.textBox4);
-            this.groupBox1.Controls.Add(this.textBox5);
             this.groupBox1.Controls.Add(this.textBox6);
-            this.groupBox1.Controls.Add(this.textBox3);
-            this.groupBox1.Controls.Add(this.textBox2);
             this.groupBox1.Controls.Add(this.textBox1);
             this.groupBox1.Location = new System.Drawing.Point(551, 343);
             this.groupBox1.Name = "groupBox1";
@@ -160,6 +163,86 @@
             this.groupBox1.TabIndex = 4;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Player params";
+            // 
+            // button7
+            // 
+            this.button7.Location = new System.Drawing.Point(516, 107);
+            this.button7.Name = "button7";
+            this.button7.Size = new System.Drawing.Size(98, 23);
+            this.button7.TabIndex = 30;
+            this.button7.Text = "Vol3";
+            this.button7.UseVisualStyleBackColor = true;
+            this.button7.Click += new System.EventHandler(this.button7_Click);
+            // 
+            // button8
+            // 
+            this.button8.Location = new System.Drawing.Point(410, 107);
+            this.button8.Name = "button8";
+            this.button8.Size = new System.Drawing.Size(98, 23);
+            this.button8.TabIndex = 29;
+            this.button8.Text = "Vol2";
+            this.button8.UseVisualStyleBackColor = true;
+            this.button8.Click += new System.EventHandler(this.button8_Click);
+            // 
+            // button9
+            // 
+            this.button9.Location = new System.Drawing.Point(304, 107);
+            this.button9.Name = "button9";
+            this.button9.Size = new System.Drawing.Size(98, 23);
+            this.button9.TabIndex = 28;
+            this.button9.Text = "Vol1";
+            this.button9.UseVisualStyleBackColor = true;
+            this.button9.Click += new System.EventHandler(this.button9_Click);
+            // 
+            // button10
+            // 
+            this.button10.Location = new System.Drawing.Point(198, 107);
+            this.button10.Name = "button10";
+            this.button10.Size = new System.Drawing.Size(98, 23);
+            this.button10.TabIndex = 27;
+            this.button10.Text = "Vol0";
+            this.button10.UseVisualStyleBackColor = true;
+            this.button10.Click += new System.EventHandler(this.button10_Click);
+            // 
+            // button6
+            // 
+            this.button6.Location = new System.Drawing.Point(516, 74);
+            this.button6.Name = "button6";
+            this.button6.Size = new System.Drawing.Size(98, 23);
+            this.button6.TabIndex = 26;
+            this.button6.Text = "Comb3";
+            this.button6.UseVisualStyleBackColor = true;
+            this.button6.Click += new System.EventHandler(this.button6_Click);
+            // 
+            // button5
+            // 
+            this.button5.Location = new System.Drawing.Point(410, 74);
+            this.button5.Name = "button5";
+            this.button5.Size = new System.Drawing.Size(98, 23);
+            this.button5.TabIndex = 25;
+            this.button5.Text = "Comb2";
+            this.button5.UseVisualStyleBackColor = true;
+            this.button5.Click += new System.EventHandler(this.button5_Click);
+            // 
+            // button4
+            // 
+            this.button4.Location = new System.Drawing.Point(304, 74);
+            this.button4.Name = "button4";
+            this.button4.Size = new System.Drawing.Size(98, 23);
+            this.button4.TabIndex = 24;
+            this.button4.Text = "Comb1";
+            this.button4.UseVisualStyleBackColor = true;
+            this.button4.Click += new System.EventHandler(this.button4_Click);
+            // 
+            // button3
+            // 
+            this.button3.Location = new System.Drawing.Point(198, 74);
+            this.button3.Name = "button3";
+            this.button3.Size = new System.Drawing.Size(98, 23);
+            this.button3.TabIndex = 23;
+            this.button3.Text = "Comb0";
+            this.button3.UseVisualStyleBackColor = true;
+            this.button3.Click += new System.EventHandler(this.button3_Click);
             // 
             // label7
             // 
@@ -175,9 +258,9 @@
             this.label6.AutoSize = true;
             this.label6.Location = new System.Drawing.Point(159, 84);
             this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(24, 12);
+            this.label6.Size = new System.Drawing.Size(34, 12);
             this.label6.TabIndex = 21;
-            this.label6.Text = "Tais";
+            this.label6.Text = "Comb";
             // 
             // label5
             // 
@@ -224,22 +307,6 @@
             this.label1.TabIndex = 16;
             this.label1.Text = "Player0";
             // 
-            // textBox10
-            // 
-            this.textBox10.Location = new System.Drawing.Point(516, 102);
-            this.textBox10.Name = "textBox10";
-            this.textBox10.Size = new System.Drawing.Size(100, 22);
-            this.textBox10.TabIndex = 15;
-            this.textBox10.TextChanged += new System.EventHandler(this.textBox10_TextChanged);
-            // 
-            // textBox11
-            // 
-            this.textBox11.Location = new System.Drawing.Point(516, 74);
-            this.textBox11.Name = "textBox11";
-            this.textBox11.Size = new System.Drawing.Size(100, 22);
-            this.textBox11.TabIndex = 14;
-            this.textBox11.TextChanged += new System.EventHandler(this.textBox11_TextChanged);
-            // 
             // textBox12
             // 
             this.textBox12.Location = new System.Drawing.Point(516, 46);
@@ -247,22 +314,6 @@
             this.textBox12.Size = new System.Drawing.Size(100, 22);
             this.textBox12.TabIndex = 13;
             this.textBox12.TextChanged += new System.EventHandler(this.textBox12_TextChanged);
-            // 
-            // textBox7
-            // 
-            this.textBox7.Location = new System.Drawing.Point(410, 102);
-            this.textBox7.Name = "textBox7";
-            this.textBox7.Size = new System.Drawing.Size(100, 22);
-            this.textBox7.TabIndex = 12;
-            this.textBox7.TextChanged += new System.EventHandler(this.textBox7_TextChanged);
-            // 
-            // textBox8
-            // 
-            this.textBox8.Location = new System.Drawing.Point(410, 74);
-            this.textBox8.Name = "textBox8";
-            this.textBox8.Size = new System.Drawing.Size(100, 22);
-            this.textBox8.TabIndex = 11;
-            this.textBox8.TextChanged += new System.EventHandler(this.textBox8_TextChanged);
             // 
             // textBox9
             // 
@@ -272,22 +323,6 @@
             this.textBox9.TabIndex = 10;
             this.textBox9.TextChanged += new System.EventHandler(this.textBox9_TextChanged);
             // 
-            // textBox4
-            // 
-            this.textBox4.Location = new System.Drawing.Point(304, 102);
-            this.textBox4.Name = "textBox4";
-            this.textBox4.Size = new System.Drawing.Size(100, 22);
-            this.textBox4.TabIndex = 9;
-            this.textBox4.TextChanged += new System.EventHandler(this.textBox4_TextChanged);
-            // 
-            // textBox5
-            // 
-            this.textBox5.Location = new System.Drawing.Point(304, 74);
-            this.textBox5.Name = "textBox5";
-            this.textBox5.Size = new System.Drawing.Size(100, 22);
-            this.textBox5.TabIndex = 8;
-            this.textBox5.TextChanged += new System.EventHandler(this.textBox5_TextChanged);
-            // 
             // textBox6
             // 
             this.textBox6.Location = new System.Drawing.Point(304, 46);
@@ -296,24 +331,10 @@
             this.textBox6.TabIndex = 7;
             this.textBox6.TextChanged += new System.EventHandler(this.textBox6_TextChanged);
             // 
-            // textBox3
-            // 
-            this.textBox3.Location = new System.Drawing.Point(198, 102);
-            this.textBox3.Name = "textBox3";
-            this.textBox3.Size = new System.Drawing.Size(100, 22);
-            this.textBox3.TabIndex = 6;
-            this.textBox3.TextChanged += new System.EventHandler(this.textBox3_TextChanged);
-            // 
-            // textBox2
-            // 
-            this.textBox2.Location = new System.Drawing.Point(198, 74);
-            this.textBox2.Name = "textBox2";
-            this.textBox2.Size = new System.Drawing.Size(100, 22);
-            this.textBox2.TabIndex = 4;
-            this.textBox2.TextChanged += new System.EventHandler(this.textBox2_TextChanged);
-            // 
             // groupBox2
             // 
+            this.groupBox2.Controls.Add(this.button11);
+            this.groupBox2.Controls.Add(this.pictureBox1);
             this.groupBox2.Controls.Add(this.button2);
             this.groupBox2.Controls.Add(this.label10);
             this.groupBox2.Controls.Add(this.comboBox3);
@@ -326,6 +347,19 @@
             this.groupBox2.Size = new System.Drawing.Size(1226, 330);
             this.groupBox2.TabIndex = 5;
             this.groupBox2.TabStop = false;
+            this.groupBox2.Paint += new System.Windows.Forms.PaintEventHandler(this.groupBox2_Paint);
+            // 
+            // pictureBox1
+            // 
+            this.pictureBox1.Location = new System.Drawing.Point(905, 21);
+            this.pictureBox1.Name = "pictureBox1";
+            this.pictureBox1.Size = new System.Drawing.Size(294, 272);
+            this.pictureBox1.TabIndex = 27;
+            this.pictureBox1.TabStop = false;
+            this.pictureBox1.MouseDown += new System.Windows.Forms.MouseEventHandler(this.pictureBox1_MouseDown);
+            this.pictureBox1.MouseLeave += new System.EventHandler(this.pictureBox1_MouseLeave);
+            this.pictureBox1.MouseMove += new System.Windows.Forms.MouseEventHandler(this.pictureBox1_MouseMove);
+            this.pictureBox1.MouseUp += new System.Windows.Forms.MouseEventHandler(this.pictureBox1_MouseUp);
             // 
             // button2
             // 
@@ -477,6 +511,16 @@
             this.progressBar1.TabIndex = 28;
             this.progressBar1.Click += new System.EventHandler(this.progressBar1_Click);
             // 
+            // button11
+            // 
+            this.button11.Location = new System.Drawing.Point(905, 295);
+            this.button11.Name = "button11";
+            this.button11.Size = new System.Drawing.Size(67, 19);
+            this.button11.TabIndex = 31;
+            this.button11.Text = "Edit";
+            this.button11.UseVisualStyleBackColor = true;
+            this.button11.Click += new System.EventHandler(this.button11_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
@@ -494,6 +538,7 @@
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.button1);
+            this.DoubleBuffered = true;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "Form1";
@@ -504,6 +549,7 @@
             this.groupBox1.PerformLayout();
             this.groupBox2.ResumeLayout(false);
             this.groupBox2.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
             this.ResumeLayout(false);
@@ -533,17 +579,9 @@
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.TextBox textBox10;
-        private System.Windows.Forms.TextBox textBox11;
         private System.Windows.Forms.TextBox textBox12;
-        private System.Windows.Forms.TextBox textBox7;
-        private System.Windows.Forms.TextBox textBox8;
         private System.Windows.Forms.TextBox textBox9;
-        private System.Windows.Forms.TextBox textBox4;
-        private System.Windows.Forms.TextBox textBox5;
         private System.Windows.Forms.TextBox textBox6;
-        private System.Windows.Forms.TextBox textBox3;
-        private System.Windows.Forms.TextBox textBox2;
         private System.Windows.Forms.Label label8;
         private System.Windows.Forms.ComboBox comboBox3;
         private System.Windows.Forms.Label label10;
@@ -553,6 +591,16 @@
         private System.Windows.Forms.Button button2;
         private System.Windows.Forms.ComboBox comboBox4;
         private System.Windows.Forms.ProgressBar progressBar1;
+        private System.Windows.Forms.PictureBox pictureBox1;
+        private System.Windows.Forms.Button button6;
+        private System.Windows.Forms.Button button5;
+        private System.Windows.Forms.Button button4;
+        private System.Windows.Forms.Button button3;
+        private System.Windows.Forms.Button button7;
+        private System.Windows.Forms.Button button8;
+        private System.Windows.Forms.Button button9;
+        private System.Windows.Forms.Button button10;
+        private System.Windows.Forms.Button button11;
     }
 }
 
