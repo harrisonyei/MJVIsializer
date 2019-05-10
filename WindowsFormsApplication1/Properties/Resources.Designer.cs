@@ -93,16 +93,6 @@ namespace WindowsFormsApplication1.Properties {
         /// <summary>
         ///   查詢類型 System.Drawing.Bitmap 的當地語系化資源。
         /// </summary>
-        internal static System.Drawing.Bitmap addButton1 {
-            get {
-                object obj = ResourceManager.GetObject("addButton1", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   查詢類型 System.Drawing.Bitmap 的當地語系化資源。
-        /// </summary>
         internal static System.Drawing.Bitmap CFB {
             get {
                 object obj = ResourceManager.GetObject("CFB", resourceCulture);
@@ -116,16 +106,6 @@ namespace WindowsFormsApplication1.Properties {
         internal static System.Drawing.Bitmap deleteButton {
             get {
                 object obj = ResourceManager.GetObject("deleteButton", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   查詢類型 System.Drawing.Bitmap 的當地語系化資源。
-        /// </summary>
-        internal static System.Drawing.Bitmap deleteButton1 {
-            get {
-                object obj = ResourceManager.GetObject("deleteButton1", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

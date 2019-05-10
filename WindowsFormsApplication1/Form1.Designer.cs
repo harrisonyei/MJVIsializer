@@ -65,6 +65,9 @@
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.simulationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openLogToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.congifurationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.importToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.exrpotToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.label8 = new System.Windows.Forms.Label();
             this.textBox13 = new System.Windows.Forms.TextBox();
             this.label9 = new System.Windows.Forms.Label();
@@ -431,7 +434,8 @@
             // menuStrip1
             // 
             this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.simulationToolStripMenuItem});
+            this.simulationToolStripMenuItem,
+            this.congifurationToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
             this.menuStrip1.Size = new System.Drawing.Size(1250, 24);
@@ -452,6 +456,29 @@
             this.openLogToolStripMenuItem.Size = new System.Drawing.Size(128, 22);
             this.openLogToolStripMenuItem.Text = "Open log";
             this.openLogToolStripMenuItem.Click += new System.EventHandler(this.openLogToolStripMenuItem_Click);
+            // 
+            // congifurationToolStripMenuItem
+            // 
+            this.congifurationToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.importToolStripMenuItem,
+            this.exrpotToolStripMenuItem});
+            this.congifurationToolStripMenuItem.Name = "congifurationToolStripMenuItem";
+            this.congifurationToolStripMenuItem.Size = new System.Drawing.Size(97, 20);
+            this.congifurationToolStripMenuItem.Text = "Congifuration";
+            // 
+            // importToolStripMenuItem
+            // 
+            this.importToolStripMenuItem.Name = "importToolStripMenuItem";
+            this.importToolStripMenuItem.Size = new System.Drawing.Size(112, 22);
+            this.importToolStripMenuItem.Text = "Import";
+            this.importToolStripMenuItem.Click += new System.EventHandler(this.importToolStripMenuItem_Click);
+            // 
+            // exrpotToolStripMenuItem
+            // 
+            this.exrpotToolStripMenuItem.Name = "exrpotToolStripMenuItem";
+            this.exrpotToolStripMenuItem.Size = new System.Drawing.Size(112, 22);
+            this.exrpotToolStripMenuItem.Text = "Exrpot";
+            this.exrpotToolStripMenuItem.Click += new System.EventHandler(this.exrpotToolStripMenuItem_Click);
             // 
             // label8
             // 
@@ -560,6 +587,9 @@
         private System.Windows.Forms.Button button10;
         private System.Windows.Forms.Button button11;
         private System.Windows.Forms.PictureBox pictureBox2;
+        private System.Windows.Forms.ToolStripMenuItem congifurationToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem importToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem exrpotToolStripMenuItem;
     }
 }
 

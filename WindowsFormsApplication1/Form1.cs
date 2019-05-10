@@ -999,5 +999,114 @@ namespace WindowsFormsApplication1
             form.Show();
             form.UpdateFormData(WEIGHT_TEXTS, patterns);
         }
+
+        private void importToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog ofDialog = new OpenFileDialog();
+            ofDialog.Filter = "MJ Config|*.MJconfig";
+            ofDialog.Title = "Load Configuration file";
+            ofDialog.ShowDialog();
+
+            if (ofDialog.FileName != "")
+            {
+                using (BinaryReader binReader = new BinaryReader(new FileStream(ofDialog.FileName, FileMode.Open)))
+                {
+
+                    int weightCount =  binReader.ReadInt32();
+
+                    patterns = new List<int>[weightCount];
+
+                    for (int i = 0; i < weightCount; i++)
+                    {
+
+                        int patSize = binReader.ReadInt32();
+
+                        patterns[i] = new List<int>();
+
+                        for (int j = 0; j < patSize; j++)
+                        {
+                            patterns[i].Add(binReader.ReadInt32());
+                        }
+
+                    }
+
+                    // distances probabilities volatilities
+                    d     = new char[4];
+                    probs = new char[4][];
+                    volts = new char[4][];
+
+                    for (int i = 0; i < 4; i++)
+                    {
+                        d[i] = (char)binReader.ReadByte();
+
+                        probs[i] = new char[weightCount];
+                        volts[i] = new char[weightCount];
+
+                        for (int j = 0; j < weightCount; j++)
+                        {
+                            probs[i][j] = (char)binReader.ReadByte();
+                        }
+                        for (int j = 0; j < weightCount; j++)
+                        {
+                            volts[i][j] = (char)binReader.ReadByte();
+                        }
+                    }
+
+                }
+
+
+                updateFormView();
+                UpdateWeights();
+            }
+        }
+
+        private void exrpotToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            SaveFileDialog sfDialog = new SaveFileDialog();
+            sfDialog.Filter = "MJ Config|*.MJconfig";
+            sfDialog.Title = "Save Configuration file";
+            sfDialog.ShowDialog();
+
+            if (sfDialog.FileName != "")
+            {
+                using (BinaryWriter binWritter = new BinaryWriter(new FileStream(sfDialog.FileName, FileMode.OpenOrCreate)))
+                {
+
+                    int weightCount = WEIGHT_COUNT;
+
+                    binWritter.Write(weightCount);
+
+                    for (int i = 0; i < weightCount; i++)
+                    {
+
+                        binWritter.Write(patterns[i].Count);
+
+                        for (int j = 0; j < patterns[i].Count; j++)
+                        {
+                            binWritter.Write(patterns[i][j]);
+                        }
+
+                    }
+
+                    // distances probabilities volatilities
+                    for (int i = 0; i < 4; i++)
+                    {
+                        binWritter.Write((byte)d[i]);
+
+                        for (int j = 0; j < weightCount; j++)
+                        {
+                            binWritter.Write((byte)probs[i][j]);
+                        }
+                        for (int j = 0; j < weightCount; j++)
+                        {
+                            binWritter.Write((byte)volts[i][j]);
+                        }
+                    }
+                }
+            }
+
+        }
+
+
     }
 }
