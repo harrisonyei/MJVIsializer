@@ -32,12 +32,13 @@ namespace WindowsFormsApplication1
             {
                 huRounds.Clear();
                 huTais.Clear();
+                hands.Clear();
             }
 
-            public void Append(int r, int t)
+            public void Append(int r, int probs)
             {
                 huRounds.Add(r);
-                huTais.Add(t);
+                huTais.Add(probs);
             }
 
             public void AppendHand(int h0,int h1,int h2,int h3)
@@ -79,13 +80,17 @@ namespace WindowsFormsApplication1
                 min = _min;
             }
         }
-        [DllImport("./M16SimDll.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Simulation(ref int p,string str,int rounds, int dtype,int patternSize, char[] dis, char[] tweight, char[] pweight,int[] patternSizes,int[] patterns);
+        [DllImport("./M16DealingDll.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int Simulation(int randomSeed,string str,int rounds, int dtype,int patternSize, char[] dis, char[] tweight, char[] pweight,int[] patternSizes,int[] patterns);
+
+        [DllImport("./M16DealingDll.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int GetProgressUpdate();
+
         int rounds    = 100;
         int batchSize = 1;
         char[] d  = new char[4];
-        char[][] t = new char[4][];
-        char[][] p = new char[4][];
+        char[][] probs = new char[4][];
+        char[][] volts = new char[4][];
         int playerIdx = 0;
         int curplayerIdx = 0;
         int dataType  = 0;
@@ -97,13 +102,13 @@ namespace WindowsFormsApplication1
         Player[] players;
         const int WEIGHT_COUNT = 8;
         double WEIGHT_RADIUS = 0;
-        string[] WEIGHT_TEXTS = new string[8] { "a","b","c","d","e","f", "g","h"};
+        string[] WEIGHT_TEXTS = new string[8] { "Color", "a","b","c","d","e","f", "g"};
         public Form1()
         {
             for(int i = 0; i < 4; i++)
             {
-                t[i] = new char[WEIGHT_COUNT];
-                p[i] = new char[WEIGHT_COUNT];
+                probs[i] = new char[WEIGHT_COUNT];
+                volts[i] = new char[WEIGHT_COUNT];
             }
             patterns = new List<int>[WEIGHT_COUNT];
             for(int i = 0; i < WEIGHT_COUNT; i++)
@@ -111,19 +116,29 @@ namespace WindowsFormsApplication1
                 patterns[i] = new List<int>() {0};
             }
             InitializeComponent();
+
             chart1.Series.Clear();
             chart1.Titles.Clear();
+
             displayData = new List<float>();
             players     = new Player[4];
-            weights     = new float[WEIGHT_COUNT];
-            for(int i = 0;i<weights.Length;i++)
+
+            weights     = new float[2][];
+
+            for(int i = 0; i < 2; i++)
             {
-                weights[i] = 50;
+                weights[i] = new float[WEIGHT_COUNT];
+                for (int j = 0; j < WEIGHT_COUNT; j++)
+                {
+                    weights[i][j] = 0;
+                }
             }
+            
             weightPoints = new PointF[WEIGHT_COUNT];
             background  = CreateCirclePoints(WEIGHT_COUNT, 100, pictureBox1.Width * .5f, pictureBox1.Height * .5f);
             background2 = CreateCirclePoints(WEIGHT_COUNT, 50, pictureBox1.Width * .5f, pictureBox1.Height * .5f);
             WEIGHT_RADIUS = 100;
+
             for (int i = 0; i < 4; i++)
             {
                 players[i] = new Player();
@@ -138,6 +153,7 @@ namespace WindowsFormsApplication1
             label8.Text = "Initilized!";
             progress = 0;
         }
+
         void LoadLogData(string fileName)
         {
             cacheLogs.Clear();
@@ -146,7 +162,7 @@ namespace WindowsFormsApplication1
                 // Set Position to the beginning of the stream.
                 binReader.BaseStream.Position = 0;
                 // rounds int
-                rounds   = binReader.ReadInt32() * 16;
+                rounds   = binReader.ReadInt32();
                 dealMode = binReader.ReadInt32();
                 for(int i = 0;i < WEIGHT_COUNT; i++)
                 {
@@ -165,16 +181,16 @@ namespace WindowsFormsApplication1
                     d[i] = (char)binReader.ReadByte();
                     for(int j = 0; j < WEIGHT_COUNT; j++)
                     {
-                        t[i][j] = (char)binReader.ReadByte();
+                        probs[i][j] = (char)binReader.ReadByte();
                     }
                     for (int j = 0; j < WEIGHT_COUNT; j++)
                     {
-                        p[i][j] = (char)binReader.ReadByte();
+                        volts[i][j] = (char)binReader.ReadByte();
                     }
                 }
                 //per round
                 //     player 1 ~ 4 ( huround, hutai, huprob)char char float
-                for(int i = 0; i < rounds; i++)
+                for(int i = 0; i < rounds*16; i++)
                 {
                     for (int j = 0; j < 4; j++)
                     {
@@ -195,6 +211,7 @@ namespace WindowsFormsApplication1
                 ReloadChart();
             }
         }
+
         // 0:all 1:player0..., 0:Round 1:Tai 2:Prob, 0:val 1:avg 2:std
         void ReloadChart()
         {
@@ -207,12 +224,23 @@ namespace WindowsFormsApplication1
             LogData item;
             chart1.Series.Clear();
             chart1.Titles.Clear();
+
+            ChartArea chartArea = chart1.ChartAreas[0];
+
+            chartArea.AxisX.Title = "Round";
+
+            //chartArea.AxisY.Title = "yyy";
+
+            chartArea.AxisY.IntervalAutoMode = IntervalAutoMode.VariableCount;
+            chartArea.AxisX.Minimum = 0;
+
             if (!cacheLogs.TryGetValue(str, out item))
             {
                 float max;
                 float min;
                 //標題 最大數值
-                Series series1 = new Series("數列");
+                Series series1 = new Series("");
+
                 series1.YValueType = ChartValueType.Single;
                 series1.XValueType = ChartValueType.Single;
                 //設定線條顏色
@@ -220,8 +248,7 @@ namespace WindowsFormsApplication1
                 //設定字型
                 series1.Font = new Font("新細明體", 14);
                 updateDisplayData(out max,out min);
-                chart1.ChartAreas[0].AxisY.Minimum = Math.Round(0.9 * min, 3);
-                chart1.ChartAreas[0].AxisX.Minimum = 0;
+
                 //折線圖
                 if (dataType == 2)
                 {
@@ -239,7 +266,9 @@ namespace WindowsFormsApplication1
                         }
                     }
                     newmax += 1;
-                    chart1.ChartAreas[0].AxisY.Maximum = newmax;
+
+                    chartArea.AxisY.Maximum = newmax;
+
                     for (int i = 0; i < ts.Length; i++)
                     {
                         series1.Points.AddXY(i, ts[i]);
@@ -253,7 +282,7 @@ namespace WindowsFormsApplication1
                     //將數值顯示在線上
                     series1.IsValueShownAsLabel = false;
                     //將數值新增至序列
-                    chart1.ChartAreas[0].AxisY.Maximum = Math.Round(max, 3);
+                    chartArea.AxisY.Maximum = Math.Round(max, 3);
                     for (int index = 0; index < displayData.Count; index++)
                     {
                         series1.Points.AddXY(index, displayData[index]);
@@ -267,9 +296,7 @@ namespace WindowsFormsApplication1
             else
             {
                 LogData log = cacheLogs[str];
-                chart1.ChartAreas[0].AxisY.Maximum = Math.Round(1.1 * log.max, 3);
-                chart1.ChartAreas[0].AxisY.Minimum = Math.Round(0.9 * log.min, 3);
-                chart1.ChartAreas[0].AxisX.Minimum = 0;
+                chartArea.AxisY.Maximum = Math.Round(log.max, 3);
                 chart1.Series.Add(log.s);
             }
         }
@@ -313,9 +340,9 @@ namespace WindowsFormsApplication1
                 float sum = 0;
                 if (playerIdx == 0)
                 {
-                    for(int p = 0; p < 4; p++)
+                    for(int volts = 0; volts < 4; volts++)
                     {
-                        float r = players[p].GetDataType(dataType, i);
+                        float r = players[volts].GetDataType(dataType, i);
                         if(r >= 0)
                         {
                             sum += r;
@@ -343,6 +370,7 @@ namespace WindowsFormsApplication1
                 }
             }
         }
+
         int progress = 0;
         string resultFileName = "";
         int runSim()
@@ -356,8 +384,8 @@ namespace WindowsFormsApplication1
             {
                 for(int j = 0; j < WEIGHT_COUNT; j++)
                 {
-                    tweights.Add(t[i][j]);
-                    pweights.Add(p[i][j]);
+                    tweights.Add(probs[i][j]);
+                    pweights.Add(volts[i][j]);
                 }
             }
             for(int i = 0; i < patterns.Length; i++)
@@ -368,7 +396,7 @@ namespace WindowsFormsApplication1
                     pats.Add(patterns[i][j]);
                 }
             }
-            int err = Simulation(ref progress, resultFileName, rounds, dealMode,WEIGHT_COUNT, d, tweights.ToArray(), pweights.ToArray(), patSizes, pats.ToArray());
+            int err = Simulation(Guid.NewGuid().GetHashCode(), resultFileName, rounds, dealMode,WEIGHT_COUNT, d, tweights.ToArray(), pweights.ToArray(), patSizes, pats.ToArray());
             if (err == -1)
             {
                 resultFileName = "Error !";
@@ -380,13 +408,16 @@ namespace WindowsFormsApplication1
         {
             while (progress <= 99)
             {
-                if(progressBar1.Value < progress)
+                Task.Delay(20);
+                progressBar1.Invoke(new Action(() =>
                 {
-                    progressBar1.Invoke(new Action(() =>
+                    progress = GetProgressUpdate();
+                    if(progress < 0)
                     {
-                        progressBar1.Value = progress;
-                    }));
-                }
+                        progress = 0;
+                    }
+                    progressBar1.Value = progress;
+                }));
             }
             return 0;
         }
@@ -403,6 +434,7 @@ namespace WindowsFormsApplication1
             }
             resultFileName = "MJ-" + DateTime.Now.ToString("MMddHHmmss") + ".MJlog";
             SimStart();
+            cacheLogs.Clear();
         }
 
         async void SimStart()
@@ -419,9 +451,9 @@ namespace WindowsFormsApplication1
             progressBar1.Value = 100;
             progress = 0;
             LoadLogData(resultFileName);
-            await Task.Delay(1000);
-            ChangeEnabled(true);
+            await Task.Delay(2000);
             progressBar1.Value = 0;
+            ChangeEnabled(true);
         }
 
         void ChangeEnabled(bool enabled)
@@ -438,10 +470,11 @@ namespace WindowsFormsApplication1
             if (curplayerIdx > 0)
             {
                 Form2 form2 = new Form2();
-                form2.UpdateData(players[curplayerIdx - 1].hands, lastIndex, curplayerIdx - 1, d[curplayerIdx - 1]);
+                form2.UpdateData(players[curplayerIdx - 1].hands, lastIndex, curplayerIdx - 1, d[curplayerIdx - 1],WEIGHT_COUNT,probs,volts);
                 form2.Show();
             }
         }
+
         Point? prevPosition = null;
         ToolTip tooltip;
         private void toolTip1_Draw(object sender, DrawToolTipEventArgs e)
@@ -497,124 +530,12 @@ namespace WindowsFormsApplication1
         {
             // chart data type change
             dataType = comboBox1.SelectedIndex;
+            ReloadChart();
         }
 
         private void configurationsToolStripMenuItem_Click(object sender, EventArgs e)
         {
 
-        }
-
-        private void saveConfigsToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            // save config
-            SaveFileDialog sfDialog = new SaveFileDialog();
-            sfDialog.Filter = "MJ config|*.MJconfig";
-            sfDialog.Title  = "Save Config Data";
-            sfDialog.ShowDialog();
-            // If the file name is not an empty string open it for saving.  
-            if (sfDialog.FileName != "")
-            {
-                // Saves the Image via a FileStream created by the OpenFile method.  
-                using (System.IO.FileStream fs = (System.IO.FileStream)sfDialog.OpenFile())
-                {
-                    using (var fw = new StreamWriter(fs))
-                    {
-                        fw.WriteLine(rounds);
-                        fw.WriteLine(dealMode);
-                        fw.WriteLine(batchSize);
-                        fw.WriteLine(playerIdx);
-                        fw.WriteLine(dataType);
-                        fw.WriteLine(dataMode);
-                        fw.WriteLine(WEIGHT_COUNT);
-                        for (int i = 0;i< WEIGHT_COUNT; i++)
-                        {
-                            string line = "";
-                            for(int j = 0; j < patterns[i].Count; j++)
-                            {
-                                line += patterns[i][j].ToString();
-                                line += ",";
-                            }
-                            fw.WriteLine(line);
-                        }
-                        for (int i = 0; i < 4; i++)
-                        {
-                            fw.WriteLine((int)d[i]);
-                            string line = "";
-                            for (int j = 0; j < WEIGHT_COUNT; j++)
-                            {
-                                line += ((int)t[i][j]).ToString();
-                                line += ",";
-                            }
-                            fw.WriteLine(line);
-                            line = "";
-                            for (int j = 0; j < WEIGHT_COUNT; j++)
-                            {
-                                line += ((int)p[i][j]).ToString();
-                                line += ",";
-                            }
-                            fw.WriteLine(line);
-                        }
-                        fw.Flush(); // Added
-                    }
-                }
-            }
-        }
-
-        private void loadConfigsToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            // load config
-            OpenFileDialog ofDialog = new OpenFileDialog();
-            ofDialog.Filter = "MJ config|*.MJconfig";
-            ofDialog.Title = "Load Config Data";
-            ofDialog.ShowDialog();
-            // If the file name is not an empty string open it for saving.  
-            if (ofDialog.FileName != "")
-            {
-                // Saves the Image via a FileStream created by the OpenFile method.  
-                using (System.IO.FileStream fs = (System.IO.FileStream)ofDialog.OpenFile())
-                {
-                    using (var fr = new StreamReader(fs))
-                    {
-                        rounds   = int.Parse(fr.ReadLine());
-                        dealMode = int.Parse(fr.ReadLine());
-                        batchSize = int.Parse(fr.ReadLine());
-                        playerIdx = int.Parse(fr.ReadLine());
-                        dataType = int.Parse(fr.ReadLine());
-                        dataMode = int.Parse(fr.ReadLine());
-                        int weightDim = int.Parse(fr.ReadLine());
-                        for (int i = 0; i < WEIGHT_COUNT; i++)
-                        {
-                            string line = fr.ReadLine();
-                            string[] playerConfig = line.Split(',');
-                            patterns[i].Clear();
-                            for (int j = 0; j < playerConfig.Length; j++)
-                            {
-                                if(playerConfig[j] != "")
-                                {
-                                    patterns[i].Add(int.Parse(playerConfig[j]));
-                                }
-                            }
-                        }
-                        for (int i = 0; i < 4; i++)
-                        {
-                            d[i] = (char)int.Parse(fr.ReadLine());
-                            string line = fr.ReadLine();
-                            string[] playerConfig = line.Split(',');
-                            for (int j = 0; j < WEIGHT_COUNT; j++)
-                            { 
-                                t[i][j] = (char)int.Parse(playerConfig[j]);
-                            }
-                            line = fr.ReadLine();
-                            playerConfig = line.Split(',');
-                            for (int j = 0; j < WEIGHT_COUNT; j++)
-                            {
-                                p[i][j] = (char)int.Parse(playerConfig[j]);
-                            }
-                        }
-                    }
-                }
-                updateFormView();
-            }
         }
 
         void updateFormView()
@@ -630,7 +551,6 @@ namespace WindowsFormsApplication1
 
             textBox13.Text = rounds.ToString();
             textBox14.Text = batchSize.ToString();
-            comboBox4.SelectedIndex = dealMode;
         }
 
         private void openLogToolStripMenuItem_Click(object sender, EventArgs e)
@@ -645,6 +565,7 @@ namespace WindowsFormsApplication1
             if (ofDialog.FileName != "")
             {
                 LoadLogData(ofDialog.FileName);
+                UpdateWeights();
             }
         }
         private void comboBox2_SelectedIndexChanged(object sender, EventArgs e)
@@ -653,7 +574,9 @@ namespace WindowsFormsApplication1
             playerIdx = comboBox2.SelectedIndex;
             curEditWeight = playerIdx-1;
             UpdateWeights();
+            ReloadChart();
         }
+
         private void textBox1_TextChanged(object sender, EventArgs e)
         {
             // player 0 dist
@@ -667,6 +590,7 @@ namespace WindowsFormsApplication1
                 }
             }
         }
+
         private void textBox6_TextChanged(object sender, EventArgs e)
         {
             // player 1 dist
@@ -692,6 +616,7 @@ namespace WindowsFormsApplication1
                 }
             }
         }
+
         private void textBox12_TextChanged(object sender, EventArgs e)
         {
             // player 3 dist
@@ -709,6 +634,7 @@ namespace WindowsFormsApplication1
         {
             // chart data mode change
             dataMode = comboBox3.SelectedIndex;
+            ReloadChart();
         }
 
         private void textBox13_TextChanged(object sender, EventArgs e)
@@ -742,21 +668,6 @@ namespace WindowsFormsApplication1
             }
         }
 
-        private void button2_Click(object sender, EventArgs e)
-        {
-            ReloadChart();
-        }
-
-        private void comboBox4_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            dealMode = comboBox4.SelectedIndex;
-        }
-
-        private void progressBar1_Click(object sender, EventArgs e)
-        {
-
-        }
-
         private void Form1_Close(object sender, EventArgs e)
         {
 
@@ -776,121 +687,194 @@ namespace WindowsFormsApplication1
             }
             return res;
         }
-        float[] weights;
+
+        float[][] weights;
         PointF[] background;
         PointF[] background2;
         PointF[] weightPoints;
         int curWeightIndex = -1;
-        private void groupBox2_Paint(object sender, PaintEventArgs e)
+        private void paintGraph(int mode)
         {
-            if (curEditWeight < 0)
-                return;
-            Graphics g = pictureBox1.CreateGraphics();
+            Graphics g = null;
+
+            if (mode == 0)
+            {
+                g = pictureBox1.CreateGraphics();
+            }
+            else
+            {
+                g = pictureBox2.CreateGraphics();
+            }
+
             g.Clear(Color.White);
+
+            float r = 100;
+
             float w = pictureBox1.Width;
             float h = pictureBox1.Height;
-            float r = 100;
+
             float ow = pictureBox1.Width * .5f;
             float oh = pictureBox1.Height * .5f;
+
             g.DrawPolygon(Pens.Black, background);
             g.DrawPolygon(Pens.Black, background2);
             foreach (var b in background)
             {
-                g.DrawLine(Pens.Black, 1.1f*(b.X-ow)+ow, 1.1f*(b.Y-oh)+oh, ow, oh);
+                g.DrawLine(Pens.Black, 1.1f * (b.X - ow) + ow, 1.1f * (b.Y - oh) + oh, ow, oh);
             }
-            for (int i = 0; i < weights.Length; i++)
-                weightPoints[i] = new PointF(weights[i] * (background[i].X - ow) / r + ow, weights[i] * (background[i].Y- oh) / r + oh);
+
+            var _weights = weights[mode];
+
+            for (int i = 0; i < _weights.Length; i++)
+                weightPoints[i] = new PointF(_weights[i] * (background[i].X - ow) / r + ow, _weights[i] * (background[i].Y - oh) / r + oh);
+
             SolidBrush semiTransBrush = new SolidBrush(Color.FromArgb(128, 250, 0, 0));
+
             g.FillPolygon(semiTransBrush, weightPoints);
+
             g.DrawPolygon(Pens.Red, weightPoints);
-            Font f = new Font("Arial",12, FontStyle.Bold);
-            for (int i = 0; i < weights.Length; i++)
+
+            Font f = new Font("Arial", 12, FontStyle.Bold);
+
+            for (int i = 0; i < _weights.Length; i++)
             {
-                g.FillEllipse(Brushes.White, weightPoints[i].X-3, weightPoints[i].Y-3, 6, 6);
-                g.DrawEllipse(Pens.Red, weightPoints[i].X-3, weightPoints[i].Y-3, 6, 6);
-                if(curEditWeightMode == 0)
+                g.FillEllipse(Brushes.White, weightPoints[i].X - 3, weightPoints[i].Y - 3, 6, 6);
+                g.DrawEllipse(Pens.Red, weightPoints[i].X - 3, weightPoints[i].Y - 3, 6, 6);
+
+                if (mode == 0)
                 {
-                    g.DrawString(WEIGHT_TEXTS[i]+":"+Math.Round(t[curEditWeight][i]/100.0,2),f,Brushes.Black, 1.2f * (background[i].X - ow) + ow-22, 1.2f * (background[i].Y - oh) + oh-7);
+                    g.DrawString(WEIGHT_TEXTS[i] + ":" + Math.Round(probs[curEditWeight][i] / 100.0, 2), f,
+                        Brushes.Black, 1.2f * (background[i].X - ow) + ow - 22, 1.2f * (background[i].Y - oh) + oh - 7);
                 }
                 else
                 {
-                    g.DrawString(WEIGHT_TEXTS[i] + ":" + Math.Round(p[curEditWeight][i] / 100.0, 2), f, Brushes.Black, 1.2f * (background[i].X - ow) + ow - 22, 1.2f * (background[i].Y - oh) + oh - 7);
+                    g.DrawString(WEIGHT_TEXTS[i] + ":" + Math.Round((1.0f - volts[curEditWeight][i] / 100.0), 2), f,
+                        Brushes.Black, 1.2f * (background[i].X - ow) + ow - 22, 1.2f * (background[i].Y - oh) + oh - 7);
                 }
             }
-            g.DrawString("P" + curEditWeight + (curEditWeightMode==0?" probability":" volatility"), f, Brushes.Black,2,4);
+
+            g.DrawString("P" + curEditWeight + (mode == 0 ? " probability" : " volatility"), f, Brushes.Black, 2, 4);
+        }
+
+        private void groupBox2_Paint(object sender, PaintEventArgs e)
+        {
+            if (curEditWeight < 0)
+                return;
+
+            if(curEditWeightMode == 0)
+            {
+                paintGraph(0);
+            }
+            else if(curEditWeightMode == 1)
+            {
+                paintGraph(1);
+            }
+            else
+            {
+                paintGraph(0);
+                paintGraph(1);
+            }
+
+        }
+
+        private void update_weightGraph(float x,float y)
+        {
+            var _weights = weights[curEditWeightMode];
+
+            float ow = pictureBox1.Width * .5f;
+            float oh = pictureBox1.Height * .5f;
+
+            PointF a = new PointF(background[curWeightIndex].X - ow, background[curWeightIndex].Y - oh);
+            PointF b = new PointF(x - ow, y - oh);
+
+            double delta = WEIGHT_RADIUS / 20;
+            double bLen = Math.Sqrt(b.X * b.X + b.Y * b.Y);
+
+            if (bLen == 0)
+            {
+                _weights[curWeightIndex] = 0;
+            }
+            else
+            {
+                double dot = (a.X * b.X + a.Y * b.Y) / WEIGHT_RADIUS;
+                _weights[curWeightIndex] = (float)(Math.Floor(dot / delta) * delta);
+            }
+            if (_weights[curWeightIndex] > WEIGHT_RADIUS)
+            {
+                _weights[curWeightIndex] = (float)(WEIGHT_RADIUS);
+            }
+            else if (_weights[curWeightIndex] < 0)
+            {
+                _weights[curWeightIndex] = 0;
+            }
+
+            groupBox2.Invalidate();
+            UpdateFromWeights();
         }
 
         private void pictureBox1_MouseMove(object sender, MouseEventArgs e)
         {
             if (curEditWeight < 0)
                 return;
+
             if (curWeightIndex >= 0)
             {
-                float ow = pictureBox1.Width * .5f;
-                float oh = pictureBox1.Height * .5f;
-                PointF a = new PointF(background[curWeightIndex].X - ow, background[curWeightIndex].Y - oh);
-                PointF b = new PointF(e.X - ow, e.Y - oh);
-                float r = 100;
-                double delta = WEIGHT_RADIUS / 20;
-                double bLen = Math.Sqrt(b.X * b.X + b.Y * b.Y);
-                if (bLen == 0)
-                {
-                    weights[curWeightIndex] = 0;
-                }
-                else
-                {
-                    double dot = (a.X * b.X + a.Y * b.Y) / WEIGHT_RADIUS;
-                    weights[curWeightIndex] = (float)(Math.Floor(dot / delta) * delta);
-                }
-                if(weights[curWeightIndex] > WEIGHT_RADIUS * 1.1f)
-                {
-                    weights[curWeightIndex] = (float)(WEIGHT_RADIUS) *1.1f;
-                }
-                else if(weights[curWeightIndex] < 0)
-                {
-                    weights[curWeightIndex] = 0;
-                }
-                groupBox2.Invalidate();
-                UpdateFromWeights();
+                curEditWeightMode = 0;
+                update_weightGraph(e.X,e.Y);
             }
         }
 
-        private void pictureBox1_MouseLeave(object sender, EventArgs e)
+        private void pictureBox2_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (curEditWeight < 0)
+                return;
+
+            if (curWeightIndex >= 0)
+            {
+                curEditWeightMode = 1;
+                update_weightGraph(e.X, e.Y);
+            }
+        }
+
+        private void pictureBox_MouseLeave(object sender, EventArgs e)
         {
             curWeightIndex = -1;
         }
 
-        private void pictureBox1_MouseUp(object sender, MouseEventArgs e)
+        private void pictureBox_MouseUp(object sender, MouseEventArgs e)
         {
             curWeightIndex = -1;
         }
+
         float dot(PointF a, PointF b)
         {
             return a.X * b.X + a.Y * b.Y;
         }
-        float DistanceLine(PointF p, PointF a, PointF b)
+
+        float DistanceLine(PointF volts, PointF a, PointF b)
         {
-            PointF ap = new PointF(p.X - a.X, p.Y - a.Y);
+            PointF ap = new PointF(volts.X - a.X, volts.Y - a.Y);
             PointF ab = new PointF(b.X - a.X, b.Y - a.Y);
-            float t = dot(ap,ab) / dot(ab,ap);
-            if (t < 0)
-                t = 0;
-            else if (t > 1)
-                t = 1;
-            PointF c = new PointF(a.X + t * ab.X-p.X, a.Y + t * ab.Y-p.Y);
+            float probs = dot(ap,ab) / dot(ab,ap);
+            if (probs < 0)
+                probs = 0;
+            else if (probs > 1)
+                probs = 1;
+            PointF c = new PointF(a.X + probs * ab.X-volts.X, a.Y + probs * ab.Y-volts.Y);
             return (float)Math.Sqrt(c.X*c.X+c.Y*c.Y);
         }
-        private void pictureBox1_MouseDown(object sender, MouseEventArgs e)
+
+        private void weightGraph_MouseDown(MouseEventArgs e)
         {
-            if (curEditWeight < 0)
-                return;
             float min = float.PositiveInfinity;
             int idx = -1;
             float ow = pictureBox1.Width * .5f;
             float oh = pictureBox1.Height * .5f;
             float r = 100;
-            PointF center = new PointF(ow,oh);
-            for (int i = 0; i < weights.Length; i++)
+
+            PointF center = new PointF(ow, oh);
+
+            for (int i = 0; i < weights[curEditWeightMode].Length; i++)
             {
                 float d = DistanceLine(e.Location, center, background[i]);
                 if (d < min)
@@ -901,100 +885,111 @@ namespace WindowsFormsApplication1
             }
             curWeightIndex = idx;
         }
+
+        private void pictureBox1_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (curEditWeight < 0)
+                return;
+
+            curEditWeightMode = 0;
+
+            weightGraph_MouseDown(e);
+        }
+
+        private void pictureBox2_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (curEditWeight < 0)
+                return;
+
+            curEditWeightMode = 1;
+
+            weightGraph_MouseDown(e);
+        }
+
         int curEditWeight = -1;
         int curEditWeightMode = 0;
         void UpdateFromWeights()
         {
             if (curEditWeight < 0)
                 return;
+
             if (curEditWeightMode == 0)
             {
                 for (int i = 0; i < WEIGHT_COUNT; i++)
                 {
-                    t[curEditWeight][i] = (char)(weights[i] * 100 / WEIGHT_RADIUS);
+                    probs[curEditWeight][i] = (char)(weights[0][i] * 100 / WEIGHT_RADIUS);
                 }
             }
             else
             {
                 for (int i = 0; i < WEIGHT_COUNT; i++)
                 {
-                    p[curEditWeight][i] = (char)(weights[i] * 100 / WEIGHT_RADIUS);
+                    volts[curEditWeight][i] = (char)(100 - (weights[1][i] * 100 / WEIGHT_RADIUS));
                 }
             }
         }
+
         void UpdateWeights()
         {
             if (curEditWeight < 0)
                 return;
-            if(curEditWeightMode == 0)
+
+            for (int i = 0; i < WEIGHT_COUNT; i++)
             {
-                for (int i = 0; i < WEIGHT_COUNT; i++)
-                {
-                    weights[i] = (float)(t[curEditWeight][i] * WEIGHT_RADIUS / 100.0);
-                }
+                weights[0][i] = (float)(probs[curEditWeight][i] * WEIGHT_RADIUS / 100.0);
+                weights[1][i] = (float)(100.0 - (volts[curEditWeight][i] * WEIGHT_RADIUS / 100.0));
             }
-            else
-            {
-                for (int i = 0; i < WEIGHT_COUNT; i++)
-                {
-                    weights[i] = (float)(p[curEditWeight][i] * WEIGHT_RADIUS / 100.0);
-                }
-            }
+
+            curEditWeightMode = 2;
             groupBox2.Invalidate();
+
         }
+
         private void button3_Click(object sender, EventArgs e)
         {
             curEditWeight = 0;
-            curEditWeightMode = 0;
             UpdateWeights();
         }
 
         private void button4_Click(object sender, EventArgs e)
         {
             curEditWeight = 1;
-            curEditWeightMode = 0;
             UpdateWeights();
         }
 
         private void button5_Click(object sender, EventArgs e)
         {
             curEditWeight = 2;
-            curEditWeightMode = 0;
             UpdateWeights();
         }
 
         private void button6_Click(object sender, EventArgs e)
         {
             curEditWeight = 3;
-            curEditWeightMode = 0;
             UpdateWeights();
         }
 
         private void button10_Click(object sender, EventArgs e)
         {
             curEditWeight = 0;
-            curEditWeightMode = 1;
             UpdateWeights();
         }
 
         private void button9_Click(object sender, EventArgs e)
         {
             curEditWeight = 1;
-            curEditWeightMode = 1;
             UpdateWeights();
         }
 
         private void button8_Click(object sender, EventArgs e)
         {
             curEditWeight = 2;
-            curEditWeightMode = 1;
             UpdateWeights();
         }
 
         private void button7_Click(object sender, EventArgs e)
         {
             curEditWeight = 3;
-            curEditWeightMode = 1;
             UpdateWeights();
         }
 

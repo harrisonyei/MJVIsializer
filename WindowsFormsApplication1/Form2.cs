@@ -28,13 +28,23 @@ namespace WindowsFormsApplication1
         int idx           = 0;
         int player        = 0;
 
-        public void UpdateData(List<int[]> _datas,int _idx,int _player,int d)
+        public void UpdateData(List<int[]> _datas,int _idx,int _player,int d,int weightCount,char[][] probs,char[][] volts)
         {
             datas  = _datas;
             idx    = _idx;
             player = _player;
 
-            label1.Text = "Player " + player + "  dist: "+d;
+            label1.Text = "Player: " + player + " dist: " + d;
+            for(int i = 0; i < weightCount; i++)
+            {
+                label1.Text += ",  p" + i + ":  " + Math.Round(probs[player][i] / 100.0, 1);
+            }
+
+            for (int i = 0; i < weightCount; i++)
+            {
+                label1.Text += ",  v" + i + ":  " + Math.Round(probs[player][i] / 100.0, 1);
+            }
+
             label2.Text = "Round "  + idx;
             updateImages(idx);
         }
@@ -46,6 +56,11 @@ namespace WindowsFormsApplication1
 
         void updateImages(int _idx)
         {
+            if(_idx < 0 || _idx >= datas.Count)
+            {
+                return;
+            }
+
             int count = 0;
             int[] arr = new int[4] {0,1,2,4};
             for(int idx = 0; idx < 4; idx++)

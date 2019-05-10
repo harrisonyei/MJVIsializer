@@ -12,18 +12,13 @@ namespace WindowsFormsApplication1
 {
     enum mjprops{
         A3,
-        B3,
-        C3,
         A123,
-        B123,
-        C123,
         CFB,
         None
     }
     public partial class EditPatternForm : Form
     {
-        Image[] images = new Image[] { Properties.Resources.A3, Properties.Resources.B3, Properties.Resources.C3,
-        Properties.Resources.A123,Properties.Resources.B123,Properties.Resources.C123,Properties.Resources.CFB};
+        Image[] images = new Image[] { Properties.Resources.A3,Properties.Resources.A123,Properties.Resources.CFB};
         FlowLayoutPanel propsPanel;
         List<int>[] propsArr;
         List<int> curProps;
@@ -44,7 +39,7 @@ namespace WindowsFormsApplication1
                 comboBox1.Items.Add(name);
             }
             propsArr = _propsArr;
-            comboBox1.SelectedIndex = 0;
+            comboBox1.SelectedIndex = 1;
         }
 
         private void AddProperty_Click(object sender, EventArgs e)
@@ -80,13 +75,24 @@ namespace WindowsFormsApplication1
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            int idx  = comboBox1.SelectedIndex;
-            curProps = propsArr[idx];
-            RefreshFromProps();
+            if(comboBox1.SelectedIndex != 0)
+            {
+                int idx  = comboBox1.SelectedIndex;
+                curProps = propsArr[idx];
+                RefreshFromProps();
+            }
+            else
+            {
+                AddProperty.Enabled = false;
+                DeleteProp.Enabled = false;
+                propsPanel.Controls.Clear();
+            }
         }
 
         void RefreshFromProps()
         {
+            AddProperty.Enabled = true;
+            DeleteProp.Enabled  = true;
             propsPanel.Controls.Clear();
             foreach (int p in curProps)
             {
