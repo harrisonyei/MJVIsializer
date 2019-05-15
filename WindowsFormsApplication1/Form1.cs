@@ -20,12 +20,14 @@ namespace WindowsFormsApplication1
             public List<float> huRounds;
             public List<float> huTais;
             public List<int[]> hands;
+            public List<int[]> endHands;
 
             public Player()
             {
                 huRounds = new List<float>();
                 huTais   = new List<float>();
                 hands    = new List<int[]>();
+                endHands = new List<int[]>();
             }
 
             public void Init()
@@ -33,10 +35,15 @@ namespace WindowsFormsApplication1
                 huRounds.Clear();
                 huTais.Clear();
                 hands.Clear();
+                endHands.Clear();
             }
 
             public void Append(int r, int probs)
             {
+                if(r < 0)
+                {
+                    r = 20;
+                }
                 huRounds.Add(r);
                 huTais.Add(probs);
             }
@@ -45,6 +52,12 @@ namespace WindowsFormsApplication1
             {
                 int[] hand = new int[4] { h0, h1, h2 ,h3};
                 hands.Add(hand);
+            }
+
+            public void AppendEndHand(int h0, int h1, int h2, int h3)
+            {
+                int[] hand = new int[4] { h0, h1, h2, h3 };
+                endHands.Add(hand);
             }
 
             public float GetDataType(int datatype, int idx)
@@ -80,13 +93,17 @@ namespace WindowsFormsApplication1
                 min = _min;
             }
         }
-        [DllImport("./M16DealingDll.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int Simulation(int randomSeed,string str,int rounds, int dtype,int patternSize, char[] dis, char[] tweight, char[] pweight,int[] patternSizes,int[] patterns);
+        [DllImport("./MyM16Headless.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int Simulation(string configFile,string logFile,int simRounds);
 
-        [DllImport("./M16DealingDll.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("./MyM16Headless.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int GetProgressUpdate();
 
+        [DllImport("./LogAnalyzer.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int LogAnalysis(string logName, string subTitle);
+
         int rounds    = 100;
+        int logRounds = 100;
         int batchSize = 1;
         char[] d  = new char[4];
         char[][] probs = new char[4][];
@@ -95,7 +112,6 @@ namespace WindowsFormsApplication1
         int curplayerIdx = 0;
         int dataType  = 0;
         int dataMode  = 0;
-        int dealMode  = 0;
         List <float> displayData;
         List<int>[] patterns;
         Dictionary<string, LogData> cacheLogs;
@@ -154,60 +170,110 @@ namespace WindowsFormsApplication1
             progress = 0;
         }
 
+        void AnalysisLogData(string fileName)
+        {
+            string[] splits = fileName.Split('.');
+
+            LogAnalysis(splits[0], splits[1]);
+
+            string resultFile = splits[0] + "-result.csv";
+
+            string logFile = splits[0] + ".MJlog";
+
+            GenerateMJLogFromAnalysisResult(resultFile, logFile);
+
+            LoadLogData(logFile);
+        }
+
+        void GenerateMJLogFromAnalysisResult(string fileName,string output)
+        {
+            using (StreamReader file = new StreamReader(new FileStream(fileName, FileMode.Open)))
+            {
+                using (BinaryWriter binWritter = new BinaryWriter(new FileStream(output, FileMode.OpenOrCreate)))
+                {
+                    //場數
+                    string[] splits = file.ReadLine().Split(',');
+
+                    int totalRounds = int.Parse(splits[1]);
+
+                    binWritter.Write(totalRounds);
+
+                    // 標題
+                    file.ReadLine();
+                    // cur round 0,huround 1, hutai 9, sh 14, eh 18
+                    while (!file.EndOfStream)
+                    {
+                        splits = file.ReadLine().Split(',');
+
+                        for (int i = 0; i < 4; i++)
+                        {
+                            int baseIdx = i * 21;
+
+                            int huround = int.Parse(splits[baseIdx + 1]);
+                            binWritter.Write(huround);
+
+                            int hutai = int.Parse(splits[baseIdx + 9]);
+                            binWritter.Write(hutai);
+
+                            int sh0 = int.Parse(splits[baseIdx + 14]);
+                            binWritter.Write(sh0);
+                            int sh1 = int.Parse(splits[baseIdx + 15]);
+                            binWritter.Write(sh1);
+                            int sh2 = int.Parse(splits[baseIdx + 16]);
+                            binWritter.Write(sh2);
+                            int sh3 = int.Parse(splits[baseIdx + 17]);
+                            binWritter.Write(sh3);
+
+                            int eh0 = int.Parse(splits[baseIdx + 18]);
+                            binWritter.Write(eh0);
+                            int eh1 = int.Parse(splits[baseIdx + 19]);
+                            binWritter.Write(eh1);
+                            int eh2 = int.Parse(splits[baseIdx+20]);
+                            binWritter.Write(eh2);
+                            int eh3 = int.Parse(splits[baseIdx + 21]);
+                            binWritter.Write(eh3);
+                        }
+                    }
+                }
+            }
+        }
+
         void LoadLogData(string fileName)
         {
             cacheLogs.Clear();
+
             using (BinaryReader binReader = new BinaryReader(new FileStream(fileName, FileMode.Open)))
             {
                 // Set Position to the beginning of the stream.
                 binReader.BaseStream.Position = 0;
-                // rounds int
-                rounds   = binReader.ReadInt32();
-                dealMode = binReader.ReadInt32();
-                for(int i = 0;i < WEIGHT_COUNT; i++)
-                {
-                    int n = binReader.ReadInt32();
-                    patterns[i].Clear();
-                    for (int j = 0; j < n; j++)
-                    {
-                        int pat = binReader.ReadInt32();
-                        patterns[i].Add(pat);
-                    }
-                }
-                //player 1 ~ 4 ( dists, tais, probs)char char float
-                for (int i = 0; i < 4; i++)
-                {
-                    players[i].Init();
-                    d[i] = (char)binReader.ReadByte();
-                    for(int j = 0; j < WEIGHT_COUNT; j++)
-                    {
-                        probs[i][j] = (char)binReader.ReadByte();
-                    }
-                    for (int j = 0; j < WEIGHT_COUNT; j++)
-                    {
-                        volts[i][j] = (char)binReader.ReadByte();
-                    }
-                }
-                //per round
-                //     player 1 ~ 4 ( huround, hutai, huprob)char char float
-                for(int i = 0; i < rounds*16; i++)
+
+                logRounds = binReader.ReadInt32();
+
+                for (int i = 0; i < logRounds; i++)
                 {
                     for (int j = 0; j < 4; j++)
                     {
+                        int huround = binReader.ReadInt32();
+                        int hutai = binReader.ReadInt32();
+                        players[j].Append(huround, hutai);
+
+                        // 起始手排
                         int hand0 = binReader.ReadInt32();
                         int hand1 = binReader.ReadInt32();
                         int hand2 = binReader.ReadInt32();
                         int hand3 = binReader.ReadInt32();
                         players[j].AppendHand(hand0, hand1, hand2, hand3);
+
+                        // 結束時手牌
+                        hand0 = binReader.ReadInt32();
+                        hand1 = binReader.ReadInt32();
+                        hand2 = binReader.ReadInt32();
+                        hand3 = binReader.ReadInt32();
+                        players[j].AppendEndHand(hand0, hand1, hand2, hand3);
                     }
-                    for (int j = 0; j < 4; j++)
-                    {
-                        char huround = (char)binReader.ReadByte();
-                        char hutai   = (char)binReader.ReadByte();
-                        players[j].Append(huround, hutai);
-                    }
+
                 }
-                updateFormView();
+
                 ReloadChart();
             }
         }
@@ -372,35 +438,19 @@ namespace WindowsFormsApplication1
         }
 
         int progress = 0;
-        string resultFileName = "";
+        string resultLogFileName = "";
+        string resultConfigFileName = "";
+
         int runSim()
         {
-            int[] patSizes;
-            List<int> pats = new List<int>();
-            List<char> tweights = new List<char>();
-            List<char> pweights = new List<char>();
-            patSizes = new int[patterns.Length];
-            for(int i = 0; i < 4; i++)
-            {
-                for(int j = 0; j < WEIGHT_COUNT; j++)
-                {
-                    tweights.Add(probs[i][j]);
-                    pweights.Add(volts[i][j]);
-                }
-            }
-            for(int i = 0; i < patterns.Length; i++)
-            {
-                patSizes[i] =  patterns[i].Count;
-                for(int j = 0;j< patSizes[i]; j++)
-                {
-                    pats.Add(patterns[i][j]);
-                }
-            }
-            int err = Simulation(Guid.NewGuid().GetHashCode(), resultFileName, rounds, dealMode,WEIGHT_COUNT, d, tweights.ToArray(), pweights.ToArray(), patSizes, pats.ToArray());
+            ExportConfiguration(resultConfigFileName);
+            int err = Simulation(resultConfigFileName, resultLogFileName, rounds);
+
             if (err == -1)
             {
-                resultFileName = "Error !";
+                resultLogFileName = "Error !";
             }
+
             return err;
         }
 
@@ -428,11 +478,17 @@ namespace WindowsFormsApplication1
             {
                 return;
             }
+
             if (rounds <= 0)
             { 
                 return;
             }
-            resultFileName = "MJ-" + DateTime.Now.ToString("MMddHHmmss") + ".MJlog";
+
+            string timeStamp = "MJ-" + DateTime.Now.ToString("MMddHHmmss");
+
+            resultLogFileName = timeStamp + ".csv";
+            resultConfigFileName = timeStamp + ".MJconfig";
+
             SimStart();
             cacheLogs.Clear();
         }
@@ -450,7 +506,9 @@ namespace WindowsFormsApplication1
             await mainTask;
             progressBar1.Value = 100;
             progress = 0;
-            LoadLogData(resultFileName);
+
+            AnalysisLogData(resultLogFileName);
+
             await Task.Delay(2000);
             progressBar1.Value = 0;
             ChangeEnabled(true);
@@ -565,7 +623,6 @@ namespace WindowsFormsApplication1
             if (ofDialog.FileName != "")
             {
                 LoadLogData(ofDialog.FileName);
-                UpdateWeights();
             }
         }
         private void comboBox2_SelectedIndexChanged(object sender, EventArgs e)
@@ -1060,6 +1117,44 @@ namespace WindowsFormsApplication1
             }
         }
 
+        void ExportConfiguration(string fileName)
+        {
+            using (BinaryWriter binWritter = new BinaryWriter(new FileStream(fileName, FileMode.OpenOrCreate)))
+            {
+
+                int weightCount = WEIGHT_COUNT;
+
+                binWritter.Write(weightCount);
+
+                for (int i = 0; i < weightCount; i++)
+                {
+
+                    binWritter.Write(patterns[i].Count);
+
+                    for (int j = 0; j < patterns[i].Count; j++)
+                    {
+                        binWritter.Write(patterns[i][j]);
+                    }
+
+                }
+
+                // distances probabilities volatilities
+                for (int i = 0; i < 4; i++)
+                {
+                    binWritter.Write((byte)d[i]);
+
+                    for (int j = 0; j < weightCount; j++)
+                    {
+                        binWritter.Write((byte)probs[i][j]);
+                    }
+                    for (int j = 0; j < weightCount; j++)
+                    {
+                        binWritter.Write((byte)volts[i][j]);
+                    }
+                }
+            }
+        }
+
         private void exrpotToolStripMenuItem_Click(object sender, EventArgs e)
         {
             SaveFileDialog sfDialog = new SaveFileDialog();
@@ -1069,40 +1164,7 @@ namespace WindowsFormsApplication1
 
             if (sfDialog.FileName != "")
             {
-                using (BinaryWriter binWritter = new BinaryWriter(new FileStream(sfDialog.FileName, FileMode.OpenOrCreate)))
-                {
-
-                    int weightCount = WEIGHT_COUNT;
-
-                    binWritter.Write(weightCount);
-
-                    for (int i = 0; i < weightCount; i++)
-                    {
-
-                        binWritter.Write(patterns[i].Count);
-
-                        for (int j = 0; j < patterns[i].Count; j++)
-                        {
-                            binWritter.Write(patterns[i][j]);
-                        }
-
-                    }
-
-                    // distances probabilities volatilities
-                    for (int i = 0; i < 4; i++)
-                    {
-                        binWritter.Write((byte)d[i]);
-
-                        for (int j = 0; j < weightCount; j++)
-                        {
-                            binWritter.Write((byte)probs[i][j]);
-                        }
-                        for (int j = 0; j < weightCount; j++)
-                        {
-                            binWritter.Write((byte)volts[i][j]);
-                        }
-                    }
-                }
+                ExportConfiguration(sfDialog.FileName);
             }
 
         }
