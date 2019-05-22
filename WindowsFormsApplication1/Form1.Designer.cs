@@ -124,7 +124,8 @@
             "Hu Turn",
             "Hu Score",
             "Score Distribution",
-            "Hu Rate"});
+            "Hu Rate",
+            "Hand Distance"});
             this.comboBox1.Location = new System.Drawing.Point(162, 299);
             this.comboBox1.Name = "comboBox1";
             this.comboBox1.Size = new System.Drawing.Size(121, 20);

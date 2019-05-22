@@ -77,6 +77,9 @@ namespace WindowsFormsApplication1
                     case 3:
                         result = (huRounds[idx]) < 25 ? 1 : 0;
                         break;
+                    case 4:
+                        result = Math.Max(CalculateTingDist(hands[idx]) - 1,0);
+                        break;
                 }
                 return result;
             }
@@ -93,6 +96,8 @@ namespace WindowsFormsApplication1
                 min = _min;
             }
         }
+        [DllImport("./M16DealingDll.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int CalculateTingDist(int[] cards);
         [DllImport("./MyM16Headless.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int Simulation(string configFile,string logFile,int simRounds);
 
