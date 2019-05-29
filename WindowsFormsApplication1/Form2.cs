@@ -24,13 +24,15 @@ namespace WindowsFormsApplication1
             label2.Text = "";
         }
 
-        List<int[]> datas = null;
+        List<int[]> s_datas = null;
+        List<int[]> e_datas = null;
         int idx           = 0;
         int player        = 0;
 
-        public void UpdateData(List<int[]> _datas,int _idx,int _player,int d,int weightCount,char[][] probs,char[][] volts)
+        public void UpdateData(List<int[]> _s_datas, List<int[]> _e_datas, int _idx,int _player,int d,int weightCount,char[][] probs,char[][] volts)
         {
-            datas  = _datas;
+            s_datas = _s_datas;
+            e_datas = _e_datas;
             idx    = _idx;
             player = _player;
 
@@ -56,33 +58,54 @@ namespace WindowsFormsApplication1
 
         void updateImages(int _idx)
         {
-            if(_idx < 0 || _idx >= datas.Count)
+            if(_idx < 0 || _idx >= s_datas.Count)
             {
                 return;
             }
 
             int count = 0;
             int[] arr = new int[4] {0,1,2,4};
-            for(int idx = 0; idx < 4; idx++)
+
+            for(int color = 0; color < 4; color++)
             {
-                int i      = arr[idx];
-                int cards  = datas[_idx][idx];
+                int i      = arr[color];
+                int cards  = s_datas[_idx][color];
                 for (int j = 0; j < 9; j++)
                 {
                     int c_count = ((cards >> (j * 3)) & 7);
-                    for(int c =0;c< c_count; c++)
+                    for (int c = 0; c < c_count; c++)
                     {
-                        picBoxes[count].Image = sprites[i*9+j];
+                        picBoxes[count].Image = sprites[i * 9 + j];
                         count += 1;
                     }
                 }
+            }
+
+            for (int color = 0; color < 4; color++)
+            {
+                int i     = arr[color];
+                int cards = e_datas[_idx][color];
+                for (int j = 0; j < 9; j++)
+                {
+                    int c_count = ((cards >> (j * 3)) & 7);
+                    for (int c = 0; c < c_count; c++)
+                    {
+                        picBoxes[count].Image = sprites[i * 9 + j];
+                        count += 1;
+                    }
+                }
+            }
+
+            for(int i = count;i < 38; i++)
+            {
+                picBoxes[i].Image = null;
             }
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
             // left
-            idx = (idx + datas.Count - 1) % datas.Count;
+            idx = (idx + s_datas.Count - 1) % s_datas.Count;
             label2.Text = "Round " + idx;
             updateImages(idx);
         }
@@ -90,10 +113,11 @@ namespace WindowsFormsApplication1
         private void button2_Click(object sender, EventArgs e)
         {
             // right
-            idx = (idx + 1) % datas.Count;
+            idx = (idx + 1) % s_datas.Count;
             label2.Text = "Round " + idx;
             updateImages(idx);
         }
+
         private bool LoadSprites()
         {
             try
@@ -118,5 +142,6 @@ namespace WindowsFormsApplication1
                 return false;
             }
         }
+
     }
 }

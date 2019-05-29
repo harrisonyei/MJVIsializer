@@ -533,7 +533,7 @@ namespace WindowsFormsApplication1
             if (curplayerIdx > 0)
             {
                 Form2 form2 = new Form2();
-                form2.UpdateData(players[curplayerIdx - 1].hands, lastIndex, curplayerIdx - 1, d[curplayerIdx - 1],WEIGHT_COUNT,probs,volts);
+                form2.UpdateData(players[curplayerIdx - 1].hands, players[curplayerIdx - 1].endHands, lastIndex, curplayerIdx - 1, d[curplayerIdx - 1],WEIGHT_COUNT,probs,volts);
                 form2.Show();
             }
         }
